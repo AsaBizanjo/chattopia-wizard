@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import Message from './Message';
 import ChatInput from './ChatInput';
@@ -20,11 +19,21 @@ const ChatWindow: React.FC = () => {
     ? currentConversation.messages.find(msg => msg.id === editingMessageId)?.content || ''
     : '';
   
-  // Scroll to bottom when messages change or when loading
+  // Improved scroll to bottom functionality
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    const scrollToBottom = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    };
+    
+    // Scroll immediately when messages change
+    scrollToBottom();
+    
+    // Also set a small timeout to ensure content is fully rendered
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [
     currentConversation?.messages, 
     editingMessageId, 
