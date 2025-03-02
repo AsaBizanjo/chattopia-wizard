@@ -7,15 +7,25 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import NewChatButton from './NewChatButton';
 
 const ChatWindow: React.FC = () => {
-  const { currentConversation, isLoading } = useChat();
+  const { 
+    currentConversation, 
+    isLoading, 
+    editingMessageId, 
+    cancelEditingMessage 
+  } = useChat();
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Find the message content if we're editing
+  const editingMessageContent = editingMessageId && currentConversation
+    ? currentConversation.messages.find(msg => msg.id === editingMessageId)?.content || ''
+    : '';
   
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !editingMessageId) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [currentConversation?.messages]);
+  }, [currentConversation?.messages, editingMessageId]);
 
   if (!currentConversation) {
     return (
@@ -39,15 +49,21 @@ const ChatWindow: React.FC = () => {
             {currentConversation.messages.map((message, index) => (
               <Message
                 key={message.id}
+                id={message.id}
                 role={message.role}
                 content={message.content}
                 isLast={index === currentConversation.messages.length - 1 && isLoading}
+                files={message.files}
               />
             ))}
           </div>
         </ScrollArea>
       </div>
-      <ChatInput />
+      <ChatInput 
+        editingMessageId={editingMessageId} 
+        initialContent={editingMessageContent}
+        onCancelEdit={cancelEditingMessage}
+      />
     </div>
   );
 };

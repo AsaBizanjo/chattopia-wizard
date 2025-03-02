@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModals from './AuthModals';
 import { Button } from '@/components/ui/button';
-import { Menu, LogIn } from 'lucide-react';
+import { LogIn, Menu, X } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,15 +41,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   if (!isAuthenticated) {
     return (
       <>
-        <div className="min-h-screen flex flex-col animate-fade-in">
-          <header className="glass sticky top-0 border-thin border-t-0 border-x-0 z-10">
+        <div className="min-h-screen flex flex-col animate-fade-in bg-background text-foreground">
+          <header className="sticky top-0 border-b border-border z-10 bg-background">
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
               <div className="flex items-center">
                 <h1 className="text-xl font-semibold">ChatLLM</h1>
               </div>
               
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" onClick={openLoginModal}>
+                <Button variant="outline" onClick={openLoginModal}>
                   Log in
                 </Button>
                 <Button onClick={openSignupModal}>
@@ -90,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <>
-      <div className="flex h-screen w-full">
+      <div className="flex h-screen w-full bg-background text-foreground">
         {/* Desktop sidebar */}
         <div className="hidden md:block">
           <Sidebar />
@@ -121,7 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         
         {/* Main content */}
         <div className="flex-1 flex flex-col">
-          <header className="h-12 md:hidden glass border-thin border-t-0 border-x-0 flex items-center px-4">
+          <header className="h-12 md:hidden border-b border-border flex items-center px-4">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -139,8 +139,5 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     </>
   );
 };
-
-// Add missing X icon import
-import { X } from 'lucide-react';
 
 export default Layout;

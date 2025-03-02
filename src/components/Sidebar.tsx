@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import NewChatButton from './NewChatButton';
+import EndpointSelector from './EndpointSelector';
 import { formatDistanceToNow } from 'date-fns';
-import { Menu, X, LogOut, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { LogOut, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -38,21 +39,14 @@ const Sidebar: React.FC = () => {
 
   return (
     <div 
-      className={`glass border-r border-thin h-screen flex flex-col transition-all duration-300 ease-in-out ${
+      className={`bg-background border-r border-border h-screen flex flex-col transition-all duration-300 ease-in-out ${
         isCollapsed ? 'w-[60px]' : 'w-[300px]'
       }`}
     >
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center p-4">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-semibold">
-                {user?.username.charAt(0).toUpperCase() || 'A'}
-              </span>
-            </div>
-            <span className="font-medium truncate">
-              {user?.username || 'Guest'}
-            </span>
+            <span className="font-semibold text-lg">Chat LLM</span>
           </div>
         )}
         <Button 
@@ -64,6 +58,12 @@ const Sidebar: React.FC = () => {
           {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </Button>
       </div>
+      
+      {!isCollapsed && (
+        <div className="px-4 py-2">
+          <EndpointSelector />
+        </div>
+      )}
       
       <Separator />
       
@@ -114,14 +114,21 @@ const Sidebar: React.FC = () => {
       <Separator />
       
       <div className="p-4">
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className={`w-full justify-start ${isCollapsed ? 'px-0 justify-center' : ''}`}
-        >
-          <LogOut size={18} />
-          {!isCollapsed && <span className="ml-2">Logout</span>}
-        </Button>
+        <div className={`flex items-center space-x-2 ${isCollapsed ? 'justify-center' : ''}`}>
+          {!isCollapsed && (
+            <div className="flex-1">
+              <div className="font-medium truncate">{user?.username || 'Guest'}</div>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <LogOut size={18} />
+          </Button>
+        </div>
       </div>
     </div>
   );
