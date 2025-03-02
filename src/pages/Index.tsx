@@ -9,7 +9,9 @@ const Index: React.FC = () => {
 
   return (
     <Layout>
-      <ChatWindow />
+      <div className="ml-[300px] transition-all duration-300 ease-in-out">
+        <ChatWindow />
+      </div>
     </Layout>
   );
 };

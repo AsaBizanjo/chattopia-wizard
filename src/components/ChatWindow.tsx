@@ -20,12 +20,17 @@ const ChatWindow: React.FC = () => {
     ? currentConversation.messages.find(msg => msg.id === editingMessageId)?.content || ''
     : '';
   
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change or when loading
   useEffect(() => {
-    if (scrollRef.current && !editingMessageId) {
+    if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [currentConversation?.messages, editingMessageId]);
+  }, [
+    currentConversation?.messages, 
+    editingMessageId, 
+    isLoading,
+    currentConversation?.id // Also scroll when changing conversations
+  ]);
 
   if (!currentConversation) {
     return (

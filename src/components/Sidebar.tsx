@@ -39,7 +39,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <div 
-      className={`bg-background border-r border-border h-screen flex flex-col transition-all duration-300 ease-in-out ${
+      className={`bg-background border-r border-border h-screen flex flex-col transition-all duration-300 ease-in-out fixed ${
         isCollapsed ? 'w-[60px]' : 'w-[300px]'
       }`}
     >
