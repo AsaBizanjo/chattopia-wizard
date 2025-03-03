@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Settings, PlusCircle, Check, Trash2 } from 'lucide-react';
+import { Settings, PlusCircle, Check, Trash2, Edit2 } from 'lucide-react';
 import { useEndpoint } from '@/contexts/EndpointContext';
 import EndpointModal from './EndpointModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -13,6 +13,7 @@ const EndpointSelector: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null);
+  const [editingEndpoint, setEditingEndpoint] = useState<string | null>(null);
 
   const handleSelectEndpoint = (id: string) => {
     setActiveEndpoint(id);
@@ -20,9 +21,16 @@ const EndpointSelector: React.FC = () => {
   };
 
   const handleDeleteClick = (e: React.MouseEvent, endpointId: string) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     setEndpointToDelete(endpointId);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditClick = (e: React.MouseEvent, endpointId: string) => {
+    e.stopPropagation();
+    setEditingEndpoint(endpointId);
+    setIsModalOpen(true);
+    setOpen(false);
   };
 
   const handleConfirmDelete = () => {
@@ -34,6 +42,11 @@ const EndpointSelector: React.FC = () => {
     }
     setDeleteDialogOpen(false);
     setEndpointToDelete(null);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingEndpoint(null);
   };
 
   return (
@@ -72,10 +85,16 @@ const EndpointSelector: React.FC = () => {
                         />
                         {endpoint.name}
                       </div>
-                      <Trash2
-                        className="h-4 w-4 text-destructive hover:text-destructive/80 cursor-pointer"
-                        onClick={(e) => handleDeleteClick(e, endpoint.id)}
-                      />
+                      <div className="flex items-center space-x-2">
+                        <Edit2
+                          className="h-4 w-4 text-muted-foreground hover:text-primary cursor-pointer"
+                          onClick={(e) => handleEditClick(e, endpoint.id)}
+                        />
+                        <Trash2
+                          className="h-4 w-4 text-destructive hover:text-destructive/80 cursor-pointer"
+                          onClick={(e) => handleDeleteClick(e, endpoint.id)}
+                        />
+                      </div>
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -94,7 +113,11 @@ const EndpointSelector: React.FC = () => {
         </Popover>
       </div>
 
-      <EndpointModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <EndpointModal 
+        isOpen={isModalOpen} 
+        onClose={handleModalClose} 
+        editEndpointId={editingEndpoint}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

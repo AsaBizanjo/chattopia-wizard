@@ -1,231 +1,367 @@
-// contexts/ChatContext.tsx
-import React, { createContext, useContext, useState } from 'react';
-import OpenAI from 'openai';
+// ChatContext.tsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 import { useEndpoint } from './EndpointContext';
-import { useToast } from '@/hooks/use-toast';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { processFiles } from '@/utils/chatUtils';
-import { ChatContextType, Conversation, Message, SavedPrompt } from '@/types/chat';
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+// Define the type for your context
+interface ChatContextType {
+  conversations: any[];
+  currentConversation: any | null;
+  isLoading: boolean;
+  editingMessageId: string | null;
+  savedPrompts: any[];
+  createNewConversation: () => Promise<any>;
+  sendMessage: (content: string, files?: any[]) => Promise<void>;
+  selectConversation: (conversationId: string) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
+  setEditingMessage: (messageId: string, content: string) => void;
+  cancelEditingMessage: () => void;
+  updateMessage: (messageId: string, content: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  resendMessage: (messageId: string) => Promise<void>;
+  savePrompt: (name: string, content: string) => void;
+  deletePrompt: (id: string) => void;
+}
+
+// Create the context with a default value
+const ChatContext = createContext<ChatContextType>({
+  conversations: [],
+  currentConversation: null,
+  isLoading: false,
+  editingMessageId: null,
+  savedPrompts: [],
+  createNewConversation: async () => ({}),
+  sendMessage: async () => {},
+  selectConversation: async () => {},
+  deleteConversation: async () => {},
+  setEditingMessage: () => {},
+  cancelEditingMessage: () => {},
+  updateMessage: async () => {},
+  deleteMessage: async () => {},
+  resendMessage: async () => {},
+  savePrompt: () => {},
+  deletePrompt: () => {},
+});
+
+// Set the base URL for axios and configure authentication
+axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.withCredentials = true; // This allows cookies to be sent with requests
+
+// Add an interceptor to include auth tokens with every request
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    console.log("Token exists:", !!localStorage.getItem('token'));
+    console.log("Full request config:", config);
+    if (token) {
+      // Changed from Bearer to Token to match Django's expected format
+      config.headers.Authorization = `Token ${token}`;
+    }
+    // Add these headers
+    config.headers['Content-Type'] = 'application/json';
+    config.headers['Accept'] = 'application/json';
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add response interceptor for more error details
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.log("Full error response:", error.response);
+    return Promise.reject(error);
+  }
+);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { 
-    conversations, setConversations,
-    currentConversation, setCurrentConversation,
-    savedPrompts, setSavedPrompts
-  } = useLocalStorage();
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const { activeEndpoint } = useEndpoint();
-  const { toast } = useToast();
+  const [savedPrompts, setSavedPrompts] = useState<any[]>([]);
+  
+  // Get endpoint information
+  const endpointContext = useEndpoint();
 
-  const createNewConversation = () => {
-    const now = Date.now();
-    const newConversation: Conversation = {
-      id: `conv_${Math.random().toString(36).substr(2, 9)}`,
-      title: 'New Conversation',
-      messages: [],
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    setConversations(prev => [newConversation, ...prev]);
-    setCurrentConversation(newConversation);
-    setEditingMessageId(null);
-  };
-
-  const deleteConversation = (id: string) => {
-    try {
-      // Remove the conversation from the conversations array
-      setConversations(prev => prev.filter(conv => conv.id !== id));
-      
-      // If the deleted conversation was the current one, clear it
-      if (currentConversation?.id === id) {
-        setCurrentConversation(null);
+  // Load saved prompts from localStorage on component mount
+  useEffect(() => {
+    const storedPrompts = localStorage.getItem('savedPrompts');
+    if (storedPrompts) {
+      try {
+        setSavedPrompts(JSON.parse(storedPrompts));
+      } catch (e) {
+        console.error('Error parsing saved prompts:', e);
+        setSavedPrompts([]);
       }
-      
-      // Reset editing state if needed
-      setEditingMessageId(null);
+    }
+  }, []);
+
+  // Fetch conversations on component mount
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  const fetchConversations = async () => {
+    try {
+      const response = await axios.get('/api/chats/conversations/');
+      setConversations(response.data);
     } catch (error) {
-      console.error('Error deleting conversation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete conversation",
-        variant: "destructive"
-      });
-      throw error; // Re-throw to handle in the component
+      console.error('Error fetching conversations:', error);
+      // Initialize with empty array on error
+      setConversations([]);
     }
   };
 
-  const sendMessage = async (content: string, files: File[] = []) => {
-    if (!currentConversation) {
-      createNewConversation();
-    }
-    
-    setError(null);
+  const createNewConversation = async () => {
     setIsLoading(true);
-    
     try {
-      const processedFiles = files.length > 0 ? await processFiles(files) : undefined;
-      
-      const userMessage: Message = {
-        id: `msg_${Math.random().toString(36).substr(2, 9)}`,
-        role: 'user',
-        content,
-        timestamp: Date.now(),
-        files: processedFiles
-      };
-      
-      const updatedConversation = {
-        ...currentConversation!,
-        messages: [...currentConversation!.messages, userMessage],
-        updatedAt: Date.now()
-      };
-      
-      setCurrentConversation(updatedConversation);
-      setConversations(prev => 
-        prev.map(conv => conv.id === updatedConversation.id ? updatedConversation : conv)
-      );
-      
-      if (!activeEndpoint) {
-        toast({
-          title: "No API endpoint selected",
-          description: "Please add and select an API endpoint to send messages.",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const client = new OpenAI({
-        baseURL: activeEndpoint.baseUrl,
-        apiKey: activeEndpoint.apiKey,
-        dangerouslyAllowBrowser: true,
+      const response = await axios.post('/api/chats/conversations/', {
+        title: 'New Conversation'
       });
-
-      const apiMessages: OpenAI.Chat.ChatCompletionMessage[] = updatedConversation.messages.map(msg => ({
-        role: msg.role as OpenAI.Chat.ChatCompletionMessage['role'],
-        content: msg.content
-      }));
-
-      const response = await client.chat.completions.create({
-        model: activeEndpoint.model || 'gpt-3.5-turbo',
-        messages: apiMessages,
-      });
-
-      const assistantMessage: Message = {
-        id: `msg_${Math.random().toString(36).substr(2, 9)}`,
-        role: 'assistant',
-        content: response.choices[0].message.content || '',
-        timestamp: Date.now()
-      };
-      
-      const finalConversation = {
-        ...updatedConversation,
-        messages: [...updatedConversation.messages, assistantMessage],
-        title: updatedConversation.messages.length === 0 ? 
-          content.slice(0, 30) + (content.length > 30 ? '...' : '') : 
-          updatedConversation.title,
-        updatedAt: Date.now()
-      };
-      
-      setCurrentConversation(finalConversation);
-      setConversations(prev => 
-        prev.map(conv => conv.id === finalConversation.id ? finalConversation : conv)
-      );
-
-    } catch (err) {
-      console.error('Error sending message:', err);
-      setError('Failed to send message. Please try again.');
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to send message. Please try again.",
-        variant: "destructive"
-      });
+      const newConversation = response.data;
+      setConversations([newConversation, ...conversations]);
+      setCurrentConversation(newConversation);
+      return newConversation;
+    } catch (error) {
+      console.error('Error creating conversation:', error.response?.status, error.response?.data);
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const deleteMessage = (id: string) => {
-    if (!currentConversation) return;
+  const sendMessage = async (content: string, files: any[] = []) => {
+    let currentConv = currentConversation;
+    if (!currentConv) {
+      currentConv = await createNewConversation();
+      if (!currentConv) return; // Handle case where conversation creation fails
+    }
     
-    const updatedMessages = currentConversation.messages.filter(msg => msg.id !== id);
-    const updatedConversation = {
-      ...currentConversation,
-      messages: updatedMessages,
-      updatedAt: Date.now()
-    };
+    setIsLoading(true);
     
-    setCurrentConversation(updatedConversation);
-    setConversations(prev => 
-      prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
-    );
-    
-    if (editingMessageId === id) {
-      setEditingMessageId(null);
+    try {
+      // Add user message
+      const userMessageResponse = await axios.post(
+        `/api/chats/conversations/${currentConv.id}/add_message/`,
+        { role: 'user', content }
+      );
+      
+      // Handle file uploads if needed
+      if (files.length > 0) {
+        // Implement file upload logic
+      }
+      
+      // Fetch updated conversation to get the new message
+      const updatedConversation = await axios.get(`/api/chats/conversations/${currentConv.id}/`);
+      setCurrentConversation(updatedConversation.data);
+      
+      // Send to AI and get response using the active endpoint
+      const aiResponse = await axios.post('/api/chats/chat-completion/', { 
+        message: content,
+        conversation_id: currentConv.id,
+        endpoint_id: endpointContext.activeEndpoint?.id,
+        endpoint_base_url: endpointContext.activeEndpoint?.baseUrl,
+        endpoint_api_key: endpointContext.activeEndpoint?.apiKey,
+        endpoint_model: endpointContext.activeEndpoint?.model
+      });
+      
+      // Add AI response to conversation
+      await axios.post(
+        `/api/chats/conversations/${currentConv.id}/add_message/`,
+        { role: 'assistant', content: aiResponse.data.response }
+      );
+      
+      // Fetch final updated conversation
+      const finalConversation = await axios.get(`/api/chats/conversations/${currentConv.id}/`);
+      setCurrentConversation(finalConversation.data);
+      
+      // Update conversations list
+      fetchConversations();
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updateMessage = async (id: string, content: string) => {
-    if (!currentConversation) return;
-    
-    const messageIndex = currentConversation.messages.findIndex(msg => msg.id === id);
-    if (messageIndex === -1) return;
-
-    const updatedMessages = [...currentConversation.messages];
-    updatedMessages[messageIndex] = {
-      ...updatedMessages[messageIndex],
-      content
-    };
-
-    // Remove all messages after the edited message
-    const truncatedMessages = updatedMessages.slice(0, messageIndex + 1);
-    
-    const updatedConversation = {
-      ...currentConversation,
-      messages: truncatedMessages,
-      updatedAt: Date.now()
-    };
-    
-    setCurrentConversation(updatedConversation);
-    setConversations(prev => 
-      prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
-    );
-    
-    setEditingMessageId(null);
-
-    // Regenerate response
-    await sendMessage(content);
+  const selectConversation = async (conversationId: string) => {
+    try {
+      const response = await axios.get(`/api/chats/conversations/${conversationId}/`);
+      setCurrentConversation(response.data);
+    } catch (error) {
+      console.error('Error fetching conversation:', error);
+    }
   };
 
-  const resendMessage = async (id: string) => {
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      await axios.delete(`/api/chats/conversations/${conversationId}/`);
+      setConversations(conversations.filter(conv => conv.id !== conversationId));
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(null);
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
+
+  // Added for Message component
+  const setEditingMessage = (messageId: string, content: string) => {
+    setEditingMessageId(messageId);
+  };
+
+  const cancelEditingMessage = () => {
+    setEditingMessageId(null);
+  };
+
+  const updateMessage = async (messageId: string, content: string) => {
+    if (!messageId || !content.trim()) return;
+    
+    try {
+      // Update the message in the backend
+      const response = await axios.patch(`/api/chats/messages/${messageId}/`, {
+        content: content
+      });
+      
+      // Update the local state
+      if (currentConversation) {
+        const updatedMessages = currentConversation.messages.map((msg: any) => 
+          msg.id === messageId ? { ...msg, content } : msg
+        );
+        
+        setCurrentConversation({
+          ...currentConversation,
+          messages: updatedMessages
+        });
+        
+        // If this was an edit of a user message, we might need to regenerate the AI response
+        const editedMessage = currentConversation.messages.find((msg: any) => msg.id === messageId);
+        if (editedMessage && editedMessage.role === 'user') {
+          // Find the next message - if it's an assistant message, regenerate it
+          const messageIndex = currentConversation.messages.findIndex((msg: any) => msg.id === messageId);
+          const nextMessage = currentConversation.messages[messageIndex + 1];
+          
+          if (nextMessage && nextMessage.role === 'assistant') {
+            // Regenerate AI response
+            setIsLoading(true);
+            
+            try {
+              // Get AI response for the edited message with endpoint information
+              const aiResponse = await axios.post('/api/chats/chat-completion/', { 
+                message: content,
+                conversation_id: currentConversation.id,
+                is_edit: true,
+                previous_message_id: messageId,
+                endpoint_id: endpointContext.activeEndpoint?.id,
+                endpoint_base_url: endpointContext.activeEndpoint?.baseUrl,
+                endpoint_api_key: endpointContext.activeEndpoint?.apiKey,
+                endpoint_model: endpointContext.activeEndpoint?.model
+              });
+              
+              // Update the AI response
+              await axios.patch(`/api/chats/messages/${nextMessage.id}/`, {
+                content: aiResponse.data.response
+              });
+              
+              // Fetch the updated conversation
+              const updatedConversation = await axios.get(`/api/chats/conversations/${currentConversation.id}/`);
+              setCurrentConversation(updatedConversation.data);
+            } catch (error) {
+              console.error('Error regenerating AI response:', error);
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      }
+      
+      // Reset editing state
+      setEditingMessageId(null);
+    } catch (error) {
+      console.error('Error updating message:', error);
+    }
+  };
+
+  // Added for Message component
+ // Modified deleteMessage function
+const deleteMessage = async (messageId: string) => {
+  if (!currentConversation) return;
+  
+  try {
+    // Find the index of the message to be deleted
+    const messageIndex = currentConversation.messages.findIndex((msg: any) => msg.id === messageId);
+    if (messageIndex === -1) return;
+    
+    // Get the message to check if it's a user message
+    const message = currentConversation.messages[messageIndex];
+    
+    // Delete the current message
+    await axios.delete(`/api/chats/messages/${messageId}/`);
+    
+    // If it's a user message and there's a next message from assistant, delete that too
+    if (message.role === 'user' && 
+        messageIndex + 1 < currentConversation.messages.length && 
+        currentConversation.messages[messageIndex + 1].role === 'assistant') {
+      
+      const assistantMessageId = currentConversation.messages[messageIndex + 1].id;
+      await axios.delete(`/api/chats/messages/${assistantMessageId}/`);
+      
+      // Update local state - remove both messages
+      setCurrentConversation({
+        ...currentConversation,
+        messages: currentConversation.messages.filter((msg: any) => 
+          msg.id !== messageId && msg.id !== assistantMessageId
+        )
+      });
+    } else {
+      // Just remove the single message
+      setCurrentConversation({
+        ...currentConversation,
+        messages: currentConversation.messages.filter((msg: any) => msg.id !== messageId)
+      });
+    }
+    
+    // Update conversations list
+    fetchConversations();
+  } catch (error) {
+    console.error('Error deleting message:', error);
+  }
+};
+
+  // Added for Message component
+  const resendMessage = async (messageId: string) => {
     if (!currentConversation) return;
     
-    const messageIndex = currentConversation.messages.findIndex(msg => msg.id === id);
-    if (messageIndex === -1) return;
+    // Find the message to resend
+    const message = currentConversation.messages.find((msg: any) => msg.id === messageId);
+    if (!message || message.role !== 'user') return;
+    
+    // Resend the message content
+    await sendMessage(message.content);
+  };
 
-    const messageToResend = currentConversation.messages[messageIndex];
-    
-    // Remove all messages after the selected message
-    const truncatedMessages = currentConversation.messages.slice(0, messageIndex);
-    
-    const updatedConversation = {
-      ...currentConversation,
-      messages: truncatedMessages,
-      updatedAt: Date.now()
+  // Added for PromptLibrary component
+  const savePrompt = (name: string, content: string) => {
+    const newPrompt = {
+      id: Date.now().toString(),
+      name,
+      content
     };
+    const updatedPrompts = [newPrompt, ...savedPrompts];
+    setSavedPrompts(updatedPrompts);
     
-    setCurrentConversation(updatedConversation);
-    setConversations(prev => 
-      prev.map(conv => conv.id === currentConversation.id ? updatedConversation : conv)
-    );
+    // Save to localStorage
+    localStorage.setItem('savedPrompts', JSON.stringify(updatedPrompts));
+  };
 
-    // Resend the message
-    await sendMessage(messageToResend.content);
+  // Added for PromptLibrary component
+  const deletePrompt = (id: string) => {
+    const updatedPrompts = savedPrompts.filter(prompt => prompt.id !== id);
+    setSavedPrompts(updatedPrompts);
+    
+    // Update localStorage
+    localStorage.setItem('savedPrompts', JSON.stringify(updatedPrompts));
   };
 
   return (
@@ -234,36 +370,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         conversations,
         currentConversation,
         isLoading,
-        error,
         editingMessageId,
         savedPrompts,
         createNewConversation,
-        selectConversation: (id: string) => {
-          const conversation = conversations.find(conv => conv.id === id);
-          if (conversation) {
-            setCurrentConversation(conversation);
-            setEditingMessageId(null);
-          }
-        },
-        deleteConversation,
         sendMessage,
-        deleteMessage,
+        selectConversation,
+        deleteConversation,
+        setEditingMessage,
+        cancelEditingMessage,
         updateMessage,
-        setEditingMessage: setEditingMessageId,
-        cancelEditingMessage: () => setEditingMessageId(null),
+        deleteMessage,
         resendMessage,
-        savePrompt: (name: string, content: string) => {
-          const newPrompt: SavedPrompt = {
-            id: `prompt_${Math.random().toString(36).substr(2, 9)}`,
-            name,
-            content,
-            createdAt: Date.now()
-          };
-          setSavedPrompts(prev => [newPrompt, ...prev]);
-        },
-        deletePrompt: (id: string) => {
-          setSavedPrompts(prev => prev.filter(prompt => prompt.id !== id));
-        }
+        savePrompt,
+        deletePrompt
       }}
     >
       {children}
@@ -271,12 +390,4 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useChat = (): ChatContextType => {
-  const context = useContext(ChatContext);
-  if (context === undefined) {
-    throw new Error('useChat must be used within a ChatProvider');
-  }
-  return context;
-};
-
-export default ChatContext;
+export const useChat = () => useContext(ChatContext);

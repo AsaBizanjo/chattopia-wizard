@@ -1,5 +1,4 @@
-// components/EndpointModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,42 +6,168 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEndpoint } from '@/contexts/EndpointContext';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 interface EndpointModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editEndpointId: string | null;
 }
 
-const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose }) => {
+interface Model {
+  id: string;
+  [key: string]: any;
+}
+
+const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndpointId }) => {
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gpt-3.5-turbo');
-  const { addEndpoint } = useEndpoint();
+  const [model, setModel] = useState('');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const { addEndpoint, endpoints, updateEndpoint } = useEndpoint();
   const { toast } = useToast();
+  const isEditing = Boolean(editEndpointId);
 
-  const models = [
+  // Default models as fallback
+  const defaultModels = [
     'gpt-3.5-turbo',
     'gpt-4',
+    'gpt-4-turbo',
     'claude-2',
     'claude-instant-1',
+    'claude-3-opus',
+    'claude-3-sonnet',
+    'claude-3-haiku',
+    'gemini-pro',
+    'gemini-ultra',
+    'llama-3-70b',
   ];
+
+  // Load endpoint data when editing
+  useEffect(() => {
+    if (isOpen && editEndpointId) {
+      const endpointToEdit = endpoints.find(ep => ep.id === editEndpointId);
+      if (endpointToEdit) {
+        setName(endpointToEdit.name);
+        setBaseUrl(endpointToEdit.baseUrl);
+        setApiKey(endpointToEdit.apiKey);
+        setModel(endpointToEdit.model);
+        
+        // Fetch models for this endpoint
+        if (endpointToEdit.baseUrl) {
+          fetchModels(endpointToEdit.baseUrl);
+        }
+      }
+    } else if (isOpen) {
+      // Reset form when opening for a new endpoint
+      setName('');
+      setBaseUrl('');
+      setApiKey('');
+      setModel('');
+      setAvailableModels(defaultModels);
+    }
+  }, [isOpen, editEndpointId, endpoints]);
+
+  // Fetch models when baseUrl is provided
+  useEffect(() => {
+    if (baseUrl) {
+      fetchModels(baseUrl);
+    }
+  }, [baseUrl]);
+
+  const fetchModels = async (url: string) => {
+    setIsLoadingModels(true);
+    try {
+      const modelsUrl = `${url.endsWith('/') ? url.slice(0, -1) : url}/models`;
+      const response = await axios.get(modelsUrl, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: false // Explicitly set to false to avoid CORS issues
+      });
+      
+      let modelIds: string[] = [];
+      
+      // Handle different API response formats
+      if (response.data && Array.isArray(response.data.data)) {
+        // Standard OpenAI-like format
+        modelIds = response.data.data.map((model: Model) => model.id);
+      } else if (response.data && Array.isArray(response.data)) {
+        // Direct array of models
+        modelIds = response.data.map((model: Model) => model.id);
+      } else if (response.data && typeof response.data === 'object') {
+        // Try to extract models from a nested structure
+        const possibleModelArrays = Object.values(response.data).filter(
+          value => Array.isArray(value) && value.length > 0 && value[0]?.id
+        );
+        
+        if (possibleModelArrays.length > 0) {
+          modelIds = possibleModelArrays[0].map((model: Model) => model.id);
+        }
+      }
+      
+      if (modelIds.length > 0) {
+        setAvailableModels(modelIds);
+        
+        // If no model is selected yet and we have models, select the first one
+        if (!model && modelIds.length > 0) {
+          setModel(modelIds[0]);
+        }
+      } else {
+        // Fallback to default models if no models were found
+        setAvailableModels(defaultModels);
+        toast({
+          title: "Warning",
+          description: "No models found in the API response. Using default models list.",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching models:", error);
+      setAvailableModels(defaultModels);
+      toast({
+        title: "Error fetching models",
+        description: "Could not fetch models from the endpoint. Using default models list.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (name.trim() && baseUrl.trim() && apiKey.trim()) {
-      addEndpoint(name.trim(), baseUrl.trim(), apiKey.trim(), model);
-      toast({
-        title: "Endpoint added",
-        description: `${name} has been added to your endpoints.`,
-      });
+    if (name.trim() && baseUrl.trim() && apiKey.trim() && model) {
+      if (isEditing && editEndpointId) {
+        // Update existing endpoint
+        updateEndpoint(editEndpointId, {
+          name: name.trim(),
+          baseUrl: baseUrl.trim(),
+          apiKey: apiKey.trim(),
+          model
+        });
+        
+        toast({
+          title: "Endpoint updated",
+          description: `${name} has been updated successfully.`,
+        });
+      } else {
+        // Add new endpoint
+        addEndpoint(name.trim(), baseUrl.trim(), apiKey.trim(), model);
+        
+        toast({
+          title: "Endpoint added",
+          description: `${name} has been added to your endpoints.`,
+        });
+      }
       
       // Reset form
       setName('');
       setBaseUrl('');
       setApiKey('');
-      setModel('gpt-3.5-turbo');
+      setModel('');
       onClose();
     } else {
       toast({
@@ -57,9 +182,11 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose }) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add a new API endpoint</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit API endpoint' : 'Add a new API endpoint'}</DialogTitle>
           <DialogDescription>
-            Enter the details of the API endpoint you want to use.
+            {isEditing 
+              ? 'Update the details of your API endpoint.' 
+              : 'Enter the details of the API endpoint you want to use.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -99,23 +226,34 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose }) => {
             <Label htmlFor="model">Model</Label>
             <Select value={model} onValueChange={setModel}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a model" />
+                <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
               </SelectTrigger>
               <SelectContent>
-                {models.map((modelOption) => (
-                  <SelectItem key={modelOption} value={modelOption}>
-                    {modelOption}
-                  </SelectItem>
-                ))}
+                {isLoadingModels ? (
+                  <SelectItem value="loading" disabled>Loading models...</SelectItem>
+                ) : (
+                  availableModels.map((modelOption) => (
+                    <SelectItem key={modelOption} value={modelOption}>
+                      {modelOption}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
+            {baseUrl && availableModels.length === 0 && !isLoadingModels && (
+              <p className="text-sm text-muted-foreground mt-1">
+                No models found. Check your API endpoint.
+              </p>
+            )}
           </div>
           
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Add Endpoint</Button>
+            <Button type="submit" disabled={isLoadingModels}>
+              {isEditing ? 'Update Endpoint' : 'Add Endpoint'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

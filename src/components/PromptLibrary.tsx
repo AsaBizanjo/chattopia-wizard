@@ -1,4 +1,4 @@
-
+// PromptLibrary.tsx
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ interface PromptLibraryProps {
 }
 
 const PromptLibrary: React.FC<PromptLibraryProps> = ({ onSelectPrompt }) => {
-  const { savedPrompts, savePrompt, deletePrompt } = useChat();
+  const { savedPrompts = [], savePrompt, deletePrompt } = useChat();
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [promptName, setPromptName] = useState('');
   const [promptContent, setPromptContent] = useState('');
@@ -106,7 +106,7 @@ const PromptLibrary: React.FC<PromptLibraryProps> = ({ onSelectPrompt }) => {
           </div>
         ) : (
           <div className="max-h-[300px] overflow-y-auto">
-            {savedPrompts.length === 0 ? (
+            {(savedPrompts || []).length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-sm">
                 <p>You don't have any saved prompts yet.</p>
                 <Button 

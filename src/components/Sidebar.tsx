@@ -1,23 +1,22 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useChat } from '@/contexts/ChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import NewChatButton from './NewChatButton';
 import EndpointSelector from './EndpointSelector';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid } from 'date-fns';
 import { LogOut, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useSidebar } from '@/contexts/SideBarContext';
 
+
 const Sidebar: React.FC = () => {
-  const {isCollapsed, setIsCollapsed} = useSidebar();
-  const { conversations, currentConversation, selectConversation, deleteConversation } = useChat();
+  const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { conversations = [], currentConversation, selectConversation, deleteConversation } = useChat();
   const { user, logout } = useAuth();
   const { toast } = useToast();
-  
   
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -38,6 +37,9 @@ const Sidebar: React.FC = () => {
       description: "Conversation deleted.",
     });
   };
+
+  // Check if conversations is actually an array
+  const conversationsArray = Array.isArray(conversations) ? conversations : [];
 
   return (
     <div 
@@ -75,9 +77,9 @@ const Sidebar: React.FC = () => {
       
       <ScrollArea className="flex-grow px-2 py-2">
         {!isCollapsed ? (
-          conversations.length > 0 ? (
+          conversationsArray.length > 0 ? (
             <div className="space-y-2">
-              {conversations.map((conversation) => (
+              {conversationsArray.map((conversation) => (
                 <div
                   key={conversation.id}
                   onClick={() => selectConversation(conversation.id)}
@@ -90,7 +92,10 @@ const Sidebar: React.FC = () => {
                   <div className="truncate flex-1">
                     <div className="font-medium truncate">{conversation.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(conversation.updatedAt, { addSuffix: true })}
+                    {conversation.updated_at && 
+                    isValid(new Date(conversation.updated_at)) ? 
+                    formatDistanceToNow(new Date(conversation.updated_at), { addSuffix: true }) : 
+                    'Unknown date'}
                     </div>
                   </div>
                   
