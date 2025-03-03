@@ -63,7 +63,7 @@ const Message: React.FC<MessageProps> = ({
           )}
         </div>
         
-        <div className={cn("prose prose-sm max-w-none text-foreground", role === 'user' ? "ml-auto" : "mr-auto")}>
+        <div className={cn("prose prose-sm max-w-none text-foreground text-[0.8em]", role === 'user' ? "ml-auto" : "mr-auto")}>
           {content.split('\n').map((paragraph, index) => (
             <p key={index} className={index > 0 ? 'mt-2' : ''}>
               {paragraph}
@@ -97,4 +97,3 @@ const Message: React.FC<MessageProps> = ({
 };
 
 export default Message;
-
