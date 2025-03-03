@@ -4,10 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import MessageActions from './MessageActions';
 import { useChat } from '@/contexts/ChatContext';
-import { FileText, Image, Copy, Code } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import ReactMarkdown from 'react-markdown';
+import { FileText, Image } from 'lucide-react';
 
 interface MessageProps {
   id: string;
@@ -29,34 +26,6 @@ const Message: React.FC<MessageProps> = ({
   files = [] 
 }) => {
   const { deleteMessage, setEditingMessage, resendMessage } = useChat();
-  const { toast } = useToast();
-
-  const copyFullText = () => {
-    navigator.clipboard.writeText(content);
-    toast({
-      description: "Full message copied to clipboard",
-    });
-  };
-
-  const copyMarkdown = () => {
-    // For code blocks, copy just the code without the markdown syntax
-    const codeBlockRegex = /```(?:\w+)?\n([\s\S]*?)\n```/g;
-    let match;
-    let textToCopy = content;
-    
-    // If there are code blocks, extract and copy just the first one
-    if ((match = codeBlockRegex.exec(content)) !== null) {
-      textToCopy = match[1];
-    }
-    
-    navigator.clipboard.writeText(textToCopy);
-    toast({
-      description: "Code copied to clipboard",
-    });
-  };
-
-  // Check if message contains code blocks
-  const hasCodeBlock = content.includes('```');
 
   return (
     <div 
@@ -89,58 +58,26 @@ const Message: React.FC<MessageProps> = ({
         )}>
           <span>{role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System'}</span>
           
-          <div className="flex items-center gap-1">
-            {/* Copy buttons for system/assistant messages with code */}
-            {(role === 'system' || role === 'assistant') && hasCodeBlock && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={copyMarkdown}
-                title="Copy code"
-              >
-                <Code size={14} />
-              </Button>
-            )}
-            
-            {/* Copy full text button for all messages */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={copyFullText}
-              title="Copy full text"
-            >
-              <Copy size={14} />
-            </Button>
-            
-            {role === 'user' && (
-              <MessageActions 
-                messageId={id}
-                messageContent={content}
-                onEdit={setEditingMessage}
-                onDelete={deleteMessage}
-                onResend={resendMessage}
-              />
-            )}
-          </div>
+          {role === 'user' && (
+            <MessageActions 
+              messageId={id}
+              messageContent={content}
+              onEdit={setEditingMessage}
+              onDelete={deleteMessage}
+              onResend={resendMessage}
+            />
+          )}
         </div>
         
         <div className={cn(
           "prose prose-sm max-w-none text-foreground text-[0.8em] text-left",
           role === 'user' ? "w-full" : "mr-auto"
         )}>
-          {role === 'system' || role === 'assistant' ? (
-            <ReactMarkdown className="break-words">
-              {content}
-            </ReactMarkdown>
-          ) : (
-            content.split('\n').map((paragraph, index) => (
-              <p key={index} className={index > 0 ? 'mt-2' : ''}>
-                {paragraph}
-              </p>
-            ))
-          )}
+          {content.split('\n').map((paragraph, index) => (
+            <p key={index} className={index > 0 ? 'mt-2' : ''}>
+              {paragraph}
+            </p>
+          ))}
         </div>
         
         {files && files.length > 0 && (
