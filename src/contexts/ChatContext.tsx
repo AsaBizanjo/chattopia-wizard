@@ -1,140 +1,32 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, { createContext, useContext, useState } from 'react';
 import { useEndpoint } from './EndpointContext';
 import { useToast } from '@/hooks/use-toast';
-
-type FileAttachment = {
-  name: string;
-  type: string;
-  url: string;
-};
-
-type Message = {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: number;
-  files?: FileAttachment[];
-};
-
-type SavedPrompt = {
-  id: string;
-  name: string;
-  content: string;
-  createdAt: number;
-};
-
-type Conversation = {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: number;
-  updatedAt: number;
-};
-
-type ChatContextType = {
-  conversations: Conversation[];
-  currentConversation: Conversation | null;
-  isLoading: boolean;
-  error: string | null;
-  editingMessageId: string | null;
-  savedPrompts: SavedPrompt[];
-  createNewConversation: () => void;
-  selectConversation: (id: string) => void;
-  sendMessage: (content: string, files?: File[]) => Promise<void>;
-  deleteConversation: (id: string) => void;
-  deleteMessage: (id: string) => void;
-  updateMessage: (id: string, content: string) => void;
-  setEditingMessage: (id: string) => void;
-  cancelEditingMessage: () => void;
-  resendMessage: (id: string) => void;
-  savePrompt: (name: string, content: string) => void;
-  deletePrompt: (id: string) => void;
-};
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { processFiles, getMockResponse } from '@/utils/chatUtils';
+import { 
+  ChatContextType, 
+  Conversation, 
+  Message, 
+  SavedPrompt 
+} from '@/types/chat';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const { 
+    conversations, setConversations,
+    currentConversation, setCurrentConversation,
+    savedPrompts, setSavedPrompts
+  } = useLocalStorage();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>([]);
   const { activeEndpoint } = useEndpoint();
   const { toast } = useToast();
 
-  // Load conversations from localStorage on component mount
-  useEffect(() => {
-    const savedConversations = localStorage.getItem('conversations');
-    const currentId = localStorage.getItem('currentConversationId');
-    const savedPromptsData = localStorage.getItem('savedPrompts');
-    
-    if (savedConversations) {
-      const parsedConversations = JSON.parse(savedConversations);
-      setConversations(parsedConversations);
-      
-      if (currentId) {
-        const current = parsedConversations.find((conv: Conversation) => conv.id === currentId);
-        if (current) {
-          setCurrentConversation(current);
-        } else if (parsedConversations.length > 0) {
-          setCurrentConversation(parsedConversations[0]);
-        }
-      } else if (parsedConversations.length > 0) {
-        setCurrentConversation(parsedConversations[0]);
-      }
-    }
-
-    if (savedPromptsData) {
-      setSavedPrompts(JSON.parse(savedPromptsData));
-    }
-  }, []);
-
-  // Save conversations to localStorage whenever they change
-  useEffect(() => {
-    if (conversations.length > 0) {
-      localStorage.setItem('conversations', JSON.stringify(conversations));
-    }
-    
-    if (currentConversation) {
-      localStorage.setItem('currentConversationId', currentConversation.id);
-    }
-  }, [conversations, currentConversation]);
-
-  // Save prompts to localStorage whenever they change
-  useEffect(() => {
-    if (savedPrompts.length > 0) {
-      localStorage.setItem('savedPrompts', JSON.stringify(savedPrompts));
-    }
-  }, [savedPrompts]);
-
-  // Save a new prompt
-  const savePrompt = (name: string, content: string) => {
-    const newPrompt: SavedPrompt = {
-      id: `prompt_${Math.random().toString(36).substr(2, 9)}`,
-      name,
-      content,
-      createdAt: Date.now()
-    };
-    
-    setSavedPrompts(prev => [newPrompt, ...prev]);
-    
-    toast({
-      title: "Prompt saved",
-      description: `"${name}" has been saved to your prompts.`
-    });
-  };
-
-  // Delete a prompt
-  const deletePrompt = (id: string) => {
-    setSavedPrompts(prev => prev.filter(prompt => prompt.id !== id));
-    
-    toast({
-      title: "Prompt deleted",
-      description: "The prompt has been removed from your list."
-    });
-  };
-
+  // Create a new conversation
   const createNewConversation = () => {
     const now = Date.now();
     const newConversation: Conversation = {
@@ -157,6 +49,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEditingMessageId(null);
   };
 
+  // Select an existing conversation
   const selectConversation = (id: string) => {
     const conversation = conversations.find(conv => conv.id === id);
     if (conversation) {
@@ -165,37 +58,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Process and store file attachments
-  const processFiles = (files: File[]): Promise<FileAttachment[]> => {
-    return Promise.all(
-      files.map(file => {
-        return new Promise<FileAttachment>((resolve) => {
-          const reader = new FileReader();
-          
-          reader.onloadend = () => {
-            resolve({
-              name: file.name,
-              type: file.type,
-              url: reader.result as string
-            });
-          };
-          
-          if (file.type.startsWith('image/')) {
-            reader.readAsDataURL(file);
-          } else {
-            // For PDFs and other files, just store the name for now
-            // In a real app, you'd upload these to a server
-            resolve({
-              name: file.name,
-              type: file.type,
-              url: '#' // Placeholder URL
-            });
-          }
-        });
-      })
-    );
-  };
-
+  // Send a message
   const sendMessage = async (content: string, files: File[] = []) => {
     if (!currentConversation) {
       createNewConversation();
@@ -281,6 +144,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Delete a conversation
   const deleteConversation = (id: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== id));
     
@@ -366,17 +230,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Helper function to generate mock responses
-  const getMockResponse = (message: string, endpointName: string = 'Default'): string => {
-    const responses = [
-      `I understand you're asking about "${message.slice(0, 20)}...". This is a placeholder response from ${endpointName} since the backend is not yet connected.`,
-      `Thanks for your message. Once the Django backend is implemented, you'll get meaningful responses here. Using ${endpointName} endpoint.`,
-      `This is a frontend simulation. Your actual query about "${message.slice(0, 20)}..." will be processed by the OpenAI API when the backend is connected to ${endpointName}.`,
-      `I've received your message. This is a placeholder response until the OpenAI integration is implemented on the backend. Selected endpoint: ${endpointName}`,
-      `In the complete application, your query would be sent to the language model via ${endpointName}. For now, this is just a simulated response.`
-    ];
+  // Save a new prompt
+  const savePrompt = (name: string, content: string) => {
+    const newPrompt: SavedPrompt = {
+      id: `prompt_${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      content,
+      createdAt: Date.now()
+    };
     
-    return responses[Math.floor(Math.random() * responses.length)];
+    setSavedPrompts(prev => [newPrompt, ...prev]);
+    
+    toast({
+      title: "Prompt saved",
+      description: `"${name}" has been saved to your prompts.`
+    });
+  };
+
+  // Delete a prompt
+  const deletePrompt = (id: string) => {
+    setSavedPrompts(prev => prev.filter(prompt => prompt.id !== id));
+    
+    toast({
+      title: "Prompt deleted",
+      description: "The prompt has been removed from your list."
+    });
   };
 
   return (
