@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send } from 'lucide-react';
 import { useChat } from '@/contexts/ChatContext';
 import FileUpload from './FileUpload';
+import PromptLibrary from './PromptLibrary';
 
 interface ChatInputProps {
   editingMessageId?: string;
@@ -73,6 +74,22 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleSelectPrompt = (promptContent: string) => {
+    setMessage(prev => {
+      const newMessage = prev ? `${prev}\n\n${promptContent}` : promptContent;
+      return newMessage;
+    });
+    
+    // Focus and resize textarea after adding prompt
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+      }
+    }, 10);
+  };
+
   // Auto-resize textarea as content grows
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -95,6 +112,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           disabled={isLoading}
         />
         <div className="absolute right-2 bottom-2 flex gap-1">
+          <PromptLibrary onSelectPrompt={handleSelectPrompt} />
           <FileUpload 
             onFilesSelected={handleFilesSelected}
             selectedFiles={selectedFiles}

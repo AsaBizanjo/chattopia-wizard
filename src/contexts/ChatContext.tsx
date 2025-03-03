@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useEndpoint } from './EndpointContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +16,13 @@ type Message = {
   files?: FileAttachment[];
 };
 
+type SavedPrompt = {
+  id: string;
+  name: string;
+  content: string;
+  createdAt: number;
+};
+
 type Conversation = {
   id: string;
   title: string;
@@ -31,6 +37,7 @@ type ChatContextType = {
   isLoading: boolean;
   error: string | null;
   editingMessageId: string | null;
+  savedPrompts: SavedPrompt[];
   createNewConversation: () => void;
   selectConversation: (id: string) => void;
   sendMessage: (content: string, files?: File[]) => Promise<void>;
@@ -40,6 +47,8 @@ type ChatContextType = {
   setEditingMessage: (id: string) => void;
   cancelEditingMessage: () => void;
   resendMessage: (id: string) => void;
+  savePrompt: (name: string, content: string) => void;
+  deletePrompt: (id: string) => void;
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -50,6 +59,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>([]);
   const { activeEndpoint } = useEndpoint();
   const { toast } = useToast();
 
@@ -57,6 +67,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const savedConversations = localStorage.getItem('conversations');
     const currentId = localStorage.getItem('currentConversationId');
+    const savedPromptsData = localStorage.getItem('savedPrompts');
     
     if (savedConversations) {
       const parsedConversations = JSON.parse(savedConversations);
@@ -73,6 +84,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentConversation(parsedConversations[0]);
       }
     }
+
+    if (savedPromptsData) {
+      setSavedPrompts(JSON.parse(savedPromptsData));
+    }
   }, []);
 
   // Save conversations to localStorage whenever they change
@@ -85,6 +100,40 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('currentConversationId', currentConversation.id);
     }
   }, [conversations, currentConversation]);
+
+  // Save prompts to localStorage whenever they change
+  useEffect(() => {
+    if (savedPrompts.length > 0) {
+      localStorage.setItem('savedPrompts', JSON.stringify(savedPrompts));
+    }
+  }, [savedPrompts]);
+
+  // Save a new prompt
+  const savePrompt = (name: string, content: string) => {
+    const newPrompt: SavedPrompt = {
+      id: `prompt_${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      content,
+      createdAt: Date.now()
+    };
+    
+    setSavedPrompts(prev => [newPrompt, ...prev]);
+    
+    toast({
+      title: "Prompt saved",
+      description: `"${name}" has been saved to your prompts.`
+    });
+  };
+
+  // Delete a prompt
+  const deletePrompt = (id: string) => {
+    setSavedPrompts(prev => prev.filter(prompt => prompt.id !== id));
+    
+    toast({
+      title: "Prompt deleted",
+      description: "The prompt has been removed from your list."
+    });
+  };
 
   const createNewConversation = () => {
     const now = Date.now();
@@ -338,6 +387,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         error,
         editingMessageId,
+        savedPrompts,
         createNewConversation,
         selectConversation,
         sendMessage,
@@ -346,7 +396,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateMessage,
         setEditingMessage,
         cancelEditingMessage,
-        resendMessage
+        resendMessage,
+        savePrompt,
+        deletePrompt
       }}
     >
       {children}
