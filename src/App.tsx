@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { EndpointProvider } from "@/contexts/EndpointContext";
+import { SidebarProvider } from "@/contexts/SideBarContext";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
       <AuthProvider>
         <EndpointProvider>
           <ChatProvider>
+          <SidebarProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -27,6 +29,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
+            </SidebarProvider>
           </ChatProvider>
         </EndpointProvider>
       </AuthProvider>

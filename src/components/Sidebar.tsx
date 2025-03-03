@@ -10,12 +10,14 @@ import { LogOut, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { useSidebar } from '@/contexts/SideBarContext';
 
 const Sidebar: React.FC = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const {isCollapsed, setIsCollapsed} = useSidebar();
   const { conversations, currentConversation, selectConversation, deleteConversation } = useChat();
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  
   
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);

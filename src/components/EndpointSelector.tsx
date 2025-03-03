@@ -1,20 +1,39 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Settings, PlusCircle, Check } from 'lucide-react';
+import { Settings, PlusCircle, Check, Trash2 } from 'lucide-react';
 import { useEndpoint } from '@/contexts/EndpointContext';
 import EndpointModal from './EndpointModal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const EndpointSelector: React.FC = () => {
-  const { endpoints, activeEndpoint, setActiveEndpoint } = useEndpoint();
+  const { endpoints, activeEndpoint, setActiveEndpoint, removeEndpoint } = useEndpoint();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null);
 
   const handleSelectEndpoint = (id: string) => {
     setActiveEndpoint(id);
     setOpen(false);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, endpointId: string) => {
+    e.stopPropagation(); 
+    setEndpointToDelete(endpointId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (endpointToDelete) {
+      removeEndpoint(endpointToDelete);
+      if (activeEndpoint?.id === endpointToDelete) {
+        setActiveEndpoint(null);
+      }
+    }
+    setDeleteDialogOpen(false);
+    setEndpointToDelete(null);
   };
 
   return (
@@ -43,13 +62,20 @@ const EndpointSelector: React.FC = () => {
                       key={endpoint.id}
                       value={endpoint.id}
                       onSelect={() => handleSelectEndpoint(endpoint.id)}
+                      className="flex justify-between"
                     >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          activeEndpoint?.id === endpoint.id ? "opacity-100" : "opacity-0"
-                        }`}
+                      <div className="flex items-center">
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            activeEndpoint?.id === endpoint.id ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                        {endpoint.name}
+                      </div>
+                      <Trash2
+                        className="h-4 w-4 text-destructive hover:text-destructive/80 cursor-pointer"
+                        onClick={(e) => handleDeleteClick(e, endpoint.id)}
                       />
-                      {endpoint.name}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -69,6 +95,23 @@ const EndpointSelector: React.FC = () => {
       </div>
 
       <EndpointModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the endpoint.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
