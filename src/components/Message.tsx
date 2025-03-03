@@ -48,8 +48,14 @@ const Message: React.FC<MessageProps> = ({
         )}
       </Avatar>
       
-      <div className={cn("flex-1 space-y-2", role === 'user' ? "text-right" : "text-left")}>
-        <div className={cn("font-medium flex items-center", role === 'user' ? "justify-end" : "justify-between")}>
+      <div className={cn(
+        "flex-1 space-y-2", 
+        role === 'user' ? "text-left flex flex-col items-end" : "text-left"
+      )}>
+        <div className={cn(
+          "font-medium flex items-center w-full", 
+          role === 'user' ? "justify-between flex-row-reverse" : "justify-between"
+        )}>
           <span>{role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System'}</span>
           
           {role === 'user' && (
@@ -63,7 +69,10 @@ const Message: React.FC<MessageProps> = ({
           )}
         </div>
         
-        <div className={cn("prose prose-sm max-w-none text-foreground text-[0.8em]", role === 'user' ? "ml-auto" : "mr-auto")}>
+        <div className={cn(
+          "prose prose-sm max-w-none text-foreground text-[0.8em] text-left",
+          role === 'user' ? "w-full" : "mr-auto"
+        )}>
           {content.split('\n').map((paragraph, index) => (
             <p key={index} className={index > 0 ? 'mt-2' : ''}>
               {paragraph}
@@ -72,7 +81,10 @@ const Message: React.FC<MessageProps> = ({
         </div>
         
         {files && files.length > 0 && (
-          <div className={cn("flex flex-wrap gap-2 mt-3", role === 'user' ? "justify-end" : "justify-start")}>
+          <div className={cn(
+            "flex flex-wrap gap-2 mt-3", 
+            role === 'user' ? "justify-end" : "justify-start"
+          )}>
             {files.map((file, index) => (
               <a 
                 key={index} 
