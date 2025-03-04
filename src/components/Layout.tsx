@@ -1,10 +1,11 @@
-
+// components/Layout.tsx
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModals from './AuthModals';
 import { Button } from '@/components/ui/button';
-import { LogIn, Menu, X } from 'lucide-react';
+import { LogIn, Menu, X, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const { theme, toggleTheme } = useTheme();
   
   const openLoginModal = () => {
     setAuthView('login');
@@ -77,6 +79,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             </div>
           </main>
+          
+          <footer className="py-4 border-t border-border mt-auto">
+            <div className="container mx-auto flex justify-center items-center text-sm text-muted-foreground">
+              <span>Made by Asa Bizanjo</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="ml-2" 
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              </Button>
+            </div>
+          </footer>
         </div>
       
         <AuthModals
@@ -131,8 +148,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Button>
             <h1 className="ml-3 font-semibold">ChatLLM</h1>
           </header>
-          <main className="flex-1">
+          <main className="flex-1 flex flex-col">
             {children}
+            <footer className="py-3 border-t border-border mt-auto flex justify-center items-center">
+              <span className="text-sm text-muted-foreground">
+                Made by <a href="https://github.com/AsaBizanjo" className="text-primary hover:underline">Asa Bizanjo</a>
+              </span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="ml-2" 
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              </Button>
+            </footer>
           </main>
         </div>
       </div>

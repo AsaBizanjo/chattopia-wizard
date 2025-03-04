@@ -3,13 +3,19 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import MessageActions from './MessageActions';
 import { useChat } from '@/contexts/ChatContext';
-import { FileText, Image, Copy, CheckCheck, Volume2, VolumeX } from 'lucide-react';
+import { FileText, Image, Copy, CheckCheck, Volume2, VolumeX, History, GitFork } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useEndpoint } from '@/contexts/EndpointContext';
 import OpenAI from 'openai';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface MessageProps {
   id: string;
@@ -21,6 +27,11 @@ interface MessageProps {
     type: string;
     url: string;
   }[];
+  versions?: {
+    id: string;
+    content: string;
+    created_at: string;
+  }[];
 }
 
 const Message: React.FC<MessageProps> = ({ 
@@ -30,17 +41,23 @@ const Message: React.FC<MessageProps> = ({
   isLast = false,
   files = [] 
 }) => {
-  const { deleteMessage, setEditingMessage, resendMessage } = useChat();
+  const { deleteMessage, setEditingMessage, resendMessage, viewMessageVersions, messageVersions, restoreMessageVersion, forkConversationFromVersion } = useChat();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const { activeEndpoint } = useEndpoint();
 
   const handleEdit = (messageId: string) => {
     setEditingMessage(messageId, content);
+  };
+
+  const handleViewVersions = async () => {
+    await viewMessageVersions(id);
+    setShowVersions(true);
   };
 
   const handleCopyCode = (code: string) => {
@@ -218,20 +235,74 @@ const Message: React.FC<MessageProps> = ({
           <span 
             className={cn(
               "text-sm font-semibold",
-              role === 'user' ? "text-primary-foreground/90" : "text-secondary-foreground/90"
+              role === 'user' ? "text-secondary-foreground/90" : "text-secondary-foreground/90"
             )}
           >
             {role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System'}
           </span>
           
           {role === 'user' ? (
-            <MessageActions 
-              messageId={id}
-              messageContent={content}
-              onEdit={handleEdit}
-              onDelete={deleteMessage}
-              onResend={resendMessage}
-            />
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs rounded-full hover:bg-secondary/80 transition-all"
+                onClick={handleViewVersions}
+              >
+                <History className="h-3.5 w-3.5 mr-1.5" /> History
+              </Button>
+              
+              <MessageActions 
+                messageId={id}
+                messageContent={content}
+                onEdit={handleEdit}
+                onDelete={deleteMessage}
+                onResend={resendMessage}
+              />
+              
+              <Dialog open={showVersions} onOpenChange={setShowVersions}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Message History</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                    {messageVersions[id]?.length > 0 ? (
+                      messageVersions[id]?.map((version) => (
+                        <div key={version.id} className="border rounded-md p-3">
+                          <div className="text-xs text-muted-foreground mb-2">
+                            {new Date(version.created_at).toLocaleString()}
+                          </div>
+                          <div className="text-sm">{version.content}</div>
+                          <div className="flex gap-2 mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => restoreMessageVersion(id, version.id)}
+                            >
+                              Restore
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                forkConversationFromVersion(id, version.id);
+                                setShowVersions(false);
+                              }}
+                            >
+                              <GitFork className="h-3.5 w-3.5 mr-1.5" /> Fork
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">
+                        No previous versions found
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           ) : role === 'assistant' && (
             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <Button

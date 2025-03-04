@@ -10,12 +10,17 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { EndpointProvider } from "@/contexts/EndpointContext";
 import { SidebarProvider } from "@/contexts/SideBarContext";
+import ImageGenerator from "@/components/imagegenerator"
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const queryClient = new QueryClient();
+
+//tnt_HAp1fFTXYbP_7XfpZY6nms4nC2WriCi9oO1lBgAAkoXFqhIR5g1x72u
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <ThemeProvider>
       <AuthProvider>
         <EndpointProvider>
           <ChatProvider>
@@ -25,6 +30,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/image-generator" element={<ImageGenerator />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
@@ -33,6 +39,7 @@ const App = () => (
           </ChatProvider>
         </EndpointProvider>
       </AuthProvider>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

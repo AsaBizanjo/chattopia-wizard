@@ -1,8 +1,8 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Paperclip, X, File, FileText, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useEndpoint } from '@/contexts/EndpointContext';
 
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -17,11 +17,22 @@ const FileUpload: React.FC<FileUploadProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const endpointContext = useEndpoint();
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     
     if (files.length > 0) {
+      // Check if Raggie is enabled in the active endpoint
+      if (!endpointContext.activeEndpoint?.ragieEnabled) {
+        toast({
+          title: "File upload not available",
+          description: "Please enable Raggie AI in your endpoint settings to use file uploads.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Check file types and sizes
       const validFiles = files.filter(file => {
         const validTypes = [
@@ -57,7 +68,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
       });
       
       if (validFiles.length > 0) {
+        // Just pass the files to the parent component
+        // The actual upload to Raggie AI will happen in the ChatContext
         onFilesSelected(validFiles);
+        
+        toast({
+          title: "Files ready",
+          description: `${validFiles.length} file(s) ready to be sent.`,
+          variant: "default"
+        });
       }
     }
     
@@ -68,6 +87,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const handleButtonClick = () => {
+    // Check if Raggie is enabled before allowing file selection
+    if (!endpointContext.activeEndpoint?.ragieEnabled) {
+      toast({
+        title: "File upload not available",
+        description: "Please enable Raggie AI in your endpoint settings to use file uploads.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     fileInputRef.current?.click();
   };
   
@@ -98,8 +127,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
         size="icon" 
         onClick={handleButtonClick}
         title="Attach files"
+        disabled={!endpointContext.activeEndpoint?.ragieEnabled}
       >
-        <Paperclip size={18} />
+        <Paperclip size={18} className={!endpointContext.activeEndpoint?.ragieEnabled ? "opacity-50" : ""} />
       </Button>
       
       {selectedFiles.length > 0 && (

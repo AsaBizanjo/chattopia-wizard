@@ -7,13 +7,24 @@ type Endpoint = {
   baseUrl: string;
   apiKey: string;
   isActive: boolean;
-  model: string; // Added model field
+  model: string;
+  ragieEnabled?: boolean;
+  ragieApiKey?: string;
+  ragieBaseUrl?: string;
 };
 
 type EndpointContextType = {
   endpoints: Endpoint[];
   activeEndpoint: Endpoint | null;
-  addEndpoint: (name: string, baseUrl: string, apiKey: string, model: string) => void;
+  addEndpoint: (
+    name: string, 
+    baseUrl: string, 
+    apiKey: string, 
+    model: string,
+    ragieEnabled?: boolean,
+    ragieApiKey?: string,
+    ragieBaseUrl?: string
+  ) => void;
   removeEndpoint: (id: string) => void;
   setActiveEndpoint: (id: string | null) => void;
   updateEndpoint: (id: string, data: Partial<Omit<Endpoint, 'id'>>) => void;
@@ -58,14 +69,25 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [endpoints, activeEndpoint]);
 
-  const addEndpoint = (name: string, baseUrl: string, apiKey: string, model: string) => {
+  const addEndpoint = (
+    name: string, 
+    baseUrl: string, 
+    apiKey: string, 
+    model: string,
+    ragieEnabled: boolean = false,
+    ragieApiKey: string = '',
+    ragieBaseUrl: string = 'https://api.ragie.io'
+  ) => {
     const newEndpoint: Endpoint = {
       id: `endpoint_${Math.random().toString(36).substr(2, 9)}`,
       name,
       baseUrl,
       apiKey,
-      model, // Added model field
-      isActive: false
+      model,
+      isActive: false,
+      ragieEnabled,
+      ragieApiKey,
+      ragieBaseUrl
     };
     
     setEndpoints(prev => [...prev, newEndpoint]);
