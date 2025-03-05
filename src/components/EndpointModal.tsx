@@ -54,11 +54,9 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
         setBaseUrl(endpointToEdit.baseUrl);
         setApiKey(endpointToEdit.apiKey);
         setModel(endpointToEdit.model);
-
-        // Fetch models for this endpoint
-        if (endpointToEdit.baseUrl) {
-          fetchModels(endpointToEdit.baseUrl);
-        }
+        
+        // Set available models to default initially
+        setAvailableModels(defaultModels);
       }
     } else if (isOpen) {
       // Reset form when opening for a new endpoint
@@ -70,17 +68,21 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
     }
   }, [isOpen, editEndpointId, endpoints]);
 
-  // Fetch models when baseUrl is provided
-  useEffect(() => {
-    if (baseUrl) {
-      fetchModels(baseUrl);
-    }
-  }, [baseUrl]);
+  // Removed the auto-fetch useEffect
 
-  const fetchModels = async (url: string) => {
+  const fetchModels = async () => {
+    if (!baseUrl.trim()) {
+      toast({
+        title: "Missing URL",
+        description: "Please enter a base URL before fetching models.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoadingModels(true);
     try {
-      const modelsUrl = `${url.endsWith('/') ? url.slice(0, -1) : url}/models`;
+      const modelsUrl = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/models`;
       
       // Always include the Authorization header with the current apiKey value
       const headers = {
@@ -120,6 +122,11 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
         if (!model && modelIds.length > 0) {
           setModel(modelIds[0]);
         }
+        
+        toast({
+          title: "Models fetched",
+          description: `Successfully fetched ${modelIds.length} models.`,
+        });
       } else {
         // Fallback to default models if no models were found
         setAvailableModels(defaultModels);
@@ -235,7 +242,18 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="model">Model</Label>
+            <div className="flex justify-between items-center mb-2">
+              <Label htmlFor="model">Model</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchModels} 
+                disabled={isLoadingModels || !baseUrl.trim()}
+              >
+                {isLoadingModels ? "Fetching..." : "Fetch Models"}
+              </Button>
+            </div>
             <Select value={model} onValueChange={setModel}>
               <SelectTrigger>
                 <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
@@ -252,11 +270,11 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
                 )}
               </SelectContent>
             </Select>
-            {baseUrl && availableModels.length === 0 && !isLoadingModels && (
-              <p className="text-sm text-muted-foreground mt-1">
-                No models found. Check your API endpoint.
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground mt-1">
+              {availableModels === defaultModels ? 
+                "Using default models list. Click 'Fetch Models' to get models from your API." : 
+                `${availableModels.length} models available.`}
+            </p>
           </div>
 
           <DialogFooter className="pt-4">
