@@ -65,7 +65,7 @@ const ChatContext = createContext<ChatContextType>({
 });
 
 
-axios.defaults.baseURL = ''
+axios.defaults.baseURL = 'http://172.187.232.176:5000'
 axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use(
