@@ -254,7 +254,7 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
               <SelectTrigger>
                 <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
               </SelectTrigger>
-              <SelectContent className="max-h-[200px] overflow-y-auto">
+              <SelectContent className="custom-scrollbar">
               {isLoadingModels ? (
                 <SelectItem value="loading" disabled>Loading models...</SelectItem>
               ) : (
