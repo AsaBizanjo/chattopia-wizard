@@ -6,17 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEndpoint } from '@/contexts/EndpointContext';
 import { useToast } from '@/hooks/use-toast';
-import axios from 'axios';
+import OpenAI from 'openai';
 
 interface EndpointModalProps {
   isOpen: boolean;
   onClose: () => void;
   editEndpointId: string | null;
-}
-
-interface Model {
-  id: string;
-  [key: string]: any;
 }
 
 const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndpointId }) => {
@@ -68,8 +63,6 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
     }
   }, [isOpen, editEndpointId, endpoints]);
 
-  // Removed the auto-fetch useEffect
-
   const fetchModels = async () => {
     if (!baseUrl.trim()) {
       toast({
@@ -80,59 +73,56 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
       return;
     }
     
+    if (!apiKey.trim()) {
+      toast({
+        title: "Missing API Key",
+        description: "Please enter an API key before fetching models.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoadingModels(true);
     try {
-      const modelsUrl = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/models`;
-      
-      // Always include the Authorization header with the current apiKey value
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      };
-      
-      const response = await axios.get(modelsUrl, {
-        headers,
-        withCredentials: false // Explicitly set to false to avoid CORS issues
+      // Create an OpenAI client with the provided baseURL and apiKey
+      const client = new OpenAI({
+        baseURL: baseUrl.trim(),
+        apiKey: apiKey.trim(),
+        dangerouslyAllowBrowser: true, // Required for browser usage
       });
-  
-      let modelIds: string[] = [];
-  
-      // Handle different API response formats
-      if (response.data && Array.isArray(response.data.data)) {
-        // Standard OpenAI-like format
-        modelIds = response.data.data.map((model: Model) => model.id);
-      } else if (response.data && Array.isArray(response.data)) {
-        // Direct array of models
-        modelIds = response.data.map((model: Model) => model.id);
-      } else if (response.data && typeof response.data === 'object') {
-        // Try to extract models from a nested structure
-        const possibleModelArrays = Object.values(response.data).filter(
-          value => Array.isArray(value) && value.length > 0 && value[0]?.id
-        );
-  
-        if (possibleModelArrays.length > 0) {
-          modelIds = possibleModelArrays[0].map((model: Model) => model.id);
-        }
-      }
-  
-      if (modelIds.length > 0) {
-        setAvailableModels(modelIds);
-  
-        // If no model is selected yet and we have models, select the first one
-        if (!model && modelIds.length > 0) {
-          setModel(modelIds[0]);
-        }
+
+      // Fetch models using the OpenAI client
+      const response = await client.models.list();
+      
+      if (response && response.data && Array.isArray(response.data)) {
+        const modelIds = response.data.map(model => model.id);
         
-        toast({
-          title: "Models fetched",
-          description: `Successfully fetched ${modelIds.length} models.`,
-        });
+        if (modelIds.length > 0) {
+          setAvailableModels(modelIds);
+          
+          // If no model is selected yet and we have models, select the first one
+          if (!model && modelIds.length > 0) {
+            setModel(modelIds[0]);
+          }
+          
+          toast({
+            title: "Models fetched",
+            description: `Successfully fetched ${modelIds.length} models.`,
+          });
+        } else {
+          // Fallback to default models if no models were found
+          setAvailableModels(defaultModels);
+          toast({
+            title: "Warning",
+            description: "No models found in the API response. Using default models list.",
+          });
+        }
       } else {
-        // Fallback to default models if no models were found
         setAvailableModels(defaultModels);
         toast({
-          title: "Warning",
-          description: "No models found in the API response. Using default models list.",
+          title: "Unexpected response",
+          description: "The API returned an unexpected format. Using default models list.",
+          variant: "destructive"
         });
       }
     } catch (error) {
@@ -249,7 +239,7 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
                 variant="outline" 
                 size="sm" 
                 onClick={fetchModels} 
-                disabled={isLoadingModels || !baseUrl.trim()}
+                disabled={isLoadingModels || !baseUrl.trim() || !apiKey.trim()}
               >
                 {isLoadingModels ? "Fetching..." : "Fetch Models"}
               </Button>
