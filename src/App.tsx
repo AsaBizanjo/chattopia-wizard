@@ -15,7 +15,6 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
-//tnt_HAp1fFTXYbP_7XfpZY6nms4nC2WriCi9oO1lBgAAkoXFqhIR5g1x72u
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
