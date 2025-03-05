@@ -61,26 +61,66 @@ const ImageGenerator: React.FC = () => {
     
     setIsLoadingModels(true);
     try {
-      const response = await fetch(`${activeEndpoint.baseUrl}/models`, {
+      const response = await fetch('https://172.187.232.176:5000/api/chats/api/fetch-models/', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeEndpoint.apiKey}`
-        }
+        },
+        body: JSON.stringify({
+          baseUrl: activeEndpoint.baseUrl,
+          apiKey: activeEndpoint.apiKey,
+        }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch models: ${response.status}`);
-      }
       
       const data = await response.json();
       
-      s
-      setAvailableModels(data.data);
+      if (response.ok && data.success) {
+        const modelIds = data.models;
+        
+        if (modelIds.length > 0) {
+          // Transform the model IDs into the expected ModelData format
+          const formattedModels = modelIds.map(id => ({
+            id,
+            object: 'model',
+            owned_by: 'unknown',
+            endpoint: activeEndpoint.baseUrl,
+            is_free: false,
+            is_early_access: false,
+            pricing: {
+              price: 0,
+              multiplier: 1,
+            },
+            context_window: 0,
+            max_output: 0,
+          }));
+          
+          setAvailableModels(formattedModels);
+          
+          toast({
+            title: "Models fetched",
+            description: `Successfully fetched ${modelIds.length} models.`,
+          });
+        } else {
+          setAvailableModels([]);
+          toast({
+            title: "Warning",
+            description: "No image generation models found in the API response.",
+          });
+        }
+      } else {
+        setAvailableModels([]);
+        toast({
+          title: "Error fetching models",
+          description: data.error || "Could not fetch models from the endpoint.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('Error fetching models:', error);
+      setAvailableModels([]);
       toast({
         title: "Failed to load models",
-        description: error instanceof Error ? error.message : "Could not retrieve available models",
+        description: error instanceof Error ? error.message : "Could not connect to the server",
         variant: "destructive"
       });
     } finally {
