@@ -475,7 +475,7 @@ def fetch_models(request):
     try:
         # Parse request body
         data = json.loads(request.body)
-        api_url = data.get('apiUrl')
+        api_url = data.get('baseUrl')
         api_key = data.get('apiKey')
         
         # Validate inputs
