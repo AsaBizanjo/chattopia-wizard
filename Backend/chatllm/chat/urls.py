@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
 from .views import (
     ConversationViewSet, MessageViewSet, MessageVersionViewSet, 
-    MessageFileViewSet, chat_completion, raggie_ai_chat, raggie_ai_upload
+    MessageFileViewSet, chat_completion, search_context, fork_conversation, rename_conversation
 )
 
 # Main router
@@ -21,6 +21,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('', include(message_router.urls)),  # Include the nested router URLs
     path('chat-completion/', chat_completion, name='chat-completion'),
-    path('raggie-ai-chat/', raggie_ai_chat, name='raggie-ai-chat'),
-    path('raggie-ai-upload/', raggie_ai_upload, name='raggie-ai-upload'),
+    path('search-context/', search_context, name='search-context'),
+    path('conversations/<int:conversation_id>/fork/', fork_conversation, name='fork-conversation'),
+    path('conversations/<int:conversation_id>/rename/',rename_conversation, name='rename-conversation'),
+
 ]

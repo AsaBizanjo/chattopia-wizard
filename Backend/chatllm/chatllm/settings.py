@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'User',
     'chat',
+    'pgvector'
 ]
 
 MIDDLEWARE = [
@@ -103,10 +104,16 @@ WSGI_APPLICATION = 'chatllm.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'chatllm',   # Replace with your actual database name
+        'USER': 'root',
+        'PASSWORD': '1234',  # Replace with the actual password for the 'postgres' role
+        'HOST': 'localhost',  # Change if your database is hosted on a different server
+        'PORT': '5432',       # Default port for PostgreSQL
     }
 }
+
+CHROMA_DB_DIR = os.path.join(BASE_DIR, "chroma_db")
 
 
 # Password validation
