@@ -68,7 +68,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 A beautifully designed interface for interacting with AI language models.
                 Sign in to start a conversation.
               </p>
-              
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 justify-center mt-6">
                 <Button size="lg" onClick={openSignupModal} className="animate-pulse-soft">
                   Get started
@@ -79,21 +78,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             </div>
           </main>
-          
-          <footer className="py-4 border-t border-border mt-auto">
-            <div className="container mx-auto flex justify-center items-center text-sm text-muted-foreground">
-              <span>Made by Asa Bizanjo</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="ml-2" 
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-              </Button>
-            </div>
-          </footer>
         </div>
       
         <AuthModals
@@ -107,7 +91,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <>
-      <div className="flex h-screen w-full bg-background text-foreground">
+      <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
         {/* Desktop sidebar */}
         <div className="hidden md:block">
           <Sidebar />
@@ -137,8 +121,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
         
         {/* Main content */}
-        <div className="flex-1 flex flex-col">
-          <header className="h-12 md:hidden border-b border-border flex items-center px-4">
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+          <header className="h-12 md:hidden border-b border-border flex items-center px-4 shrink-0">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -148,23 +132,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Button>
             <h1 className="ml-3 font-semibold">ChatLLM</h1>
           </header>
-          <main className="flex-1 flex flex-col">
-            {children}
-            <footer className="py-3 border-t border-border mt-auto flex justify-center items-center">
-              <span className="text-sm text-muted-foreground">
-                Made by <a href="https://github.com/AsaBizanjo" className="text-primary hover:underline">Asa Bizanjo</a>
-              </span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="ml-2" 
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-              </Button>
-            </footer>
-          </main>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <main className="flex-1 overflow-y-auto will-change-scroll">
+              {children}
+            </main>
+          </div>
         </div>
       </div>
     </>

@@ -5,12 +5,40 @@ import { useAuth } from '@/contexts/AuthContext';
 import NewChatButton from './NewChatButton';
 import EndpointSelector from './EndpointSelector';
 import { formatDistanceToNow, isValid } from 'date-fns';
-import { LogOut, ChevronLeft, ChevronRight, Trash2, Image } from 'lucide-react';
+import { LogOut, ChevronLeft, ChevronRight, Trash2, Image, Sparkles } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useSidebar } from '@/contexts/SideBarContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { motion } from 'framer-motion';
+
+// Create a reusable component for the Image Generation button
+const ImageGenerationButton = ({ isCollapsed = false, onClick }) => {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <Button
+        onClick={onClick}
+        variant="outline"
+        size={isCollapsed ? "icon" : "default"}
+        className={`transition-all duration-300 ease-in-out font-medium ${
+          isCollapsed ? 'w-10 h-10 rounded-full p-0' : 'py-3 px-4 rounded-xl'
+        } hover:shadow-md border-secondary/20 hover:bg-secondary/10`}
+      >
+        <Sparkles 
+          size={isCollapsed ? 20 : 18} 
+          className={isCollapsed ? 'mx-auto' : 'mr-2'} 
+        />
+        {!isCollapsed && (
+          <span className="font-medium">Image Generation</span>
+        )}
+      </Button>
+    </motion.div>
+  );
+};
 
 const Sidebar: React.FC = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
@@ -47,7 +75,6 @@ const Sidebar: React.FC = () => {
     });
   };
 
-  // Check if conversations is actually an array
   const conversationsArray = Array.isArray(conversations) ? conversations : [];
 
   return (
@@ -81,18 +108,9 @@ const Sidebar: React.FC = () => {
         
         <Separator />
         
-        <div className="p-4 space-y-2">
+        <div className="p-4 space-y-3">
           <NewChatButton isCollapsed={isCollapsed} />
-          
-          {/* Image Generation Button */}
-          <Button 
-            variant="outline" 
-            className={`w-full ${isCollapsed ? 'justify-center p-2' : ''}`}
-            onClick={openImageGenerator}
-          >
-            <Image size={18} className={isCollapsed ? '' : 'mr-2'} />
-            {!isCollapsed && <span>Image Generation</span>}
-          </Button>
+          <ImageGenerationButton isCollapsed={isCollapsed} onClick={openImageGenerator} />
         </div>
         
         <ScrollArea className="flex-grow px-2 py-2">
@@ -163,9 +181,12 @@ const Sidebar: React.FC = () => {
       <Dialog open={isImageGeneratorOpen} onOpenChange={setIsImageGeneratorOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Image Generator</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Image Generator
+            </DialogTitle>
           </DialogHeader>
-          <div className="h-[70vh]">
+          <div className="h-[70vh] rounded-xl overflow-hidden">
             <iframe 
               src="/image-generator" 
               className="w-full h-full border-none"

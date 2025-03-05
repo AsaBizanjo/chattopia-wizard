@@ -1,4 +1,4 @@
-// PromptLibrary.tsx
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ const PromptLibrary: React.FC<PromptLibraryProps> = ({ onSelectPrompt }) => {
   const handleSavePrompt = () => {
     if (promptName.trim() && promptContent.trim()) {
       savePrompt(promptName.trim(), promptContent.trim());
-      // Reset form
+      
       setPromptName('');
       setPromptContent('');
       setIsAddingPrompt(false);

@@ -8,12 +8,14 @@ interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
   selectedFiles: File[];
   onRemoveFile: (index: number) => void;
+  disabled?: boolean; 
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ 
   onFilesSelected, 
   selectedFiles, 
-  onRemoveFile 
+  onRemoveFile,
+  disabled = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -23,17 +25,17 @@ const FileUpload: React.FC<FileUploadProps> = ({
     const files = Array.from(e.target.files || []);
     
     if (files.length > 0) {
-      // Check if Raggie is enabled in the active endpoint
-      if (!endpointContext.activeEndpoint?.ragieEnabled) {
+      
+      if (!endpointContext.activeEndpoint?.baseUrl || !endpointContext.activeEndpoint?.apiKey) {
         toast({
-          title: "File upload not available",
-          description: "Please enable Raggie AI in your endpoint settings to use file uploads.",
+          title: "Endpoint not configured",
+          description: "Please configure your endpoint settings first.",
           variant: "destructive"
         });
         return;
       }
       
-      // Check file types and sizes
+      
       const validFiles = files.filter(file => {
         const validTypes = [
           'application/pdf',
@@ -44,7 +46,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           'text/plain'
         ];
         
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 10 * 1024 * 1024; 
         
         if (!validTypes.includes(file.type)) {
           toast({
@@ -68,30 +70,29 @@ const FileUpload: React.FC<FileUploadProps> = ({
       });
       
       if (validFiles.length > 0) {
-        // Just pass the files to the parent component
-        // The actual upload to Raggie AI will happen in the ChatContext
+        
         onFilesSelected(validFiles);
         
         toast({
           title: "Files ready",
-          description: `${validFiles.length} file(s) ready to be sent.`,
+          description: `${validFiles.length} file(s) ready to be processed.`,
           variant: "default"
         });
       }
     }
     
-    // Reset input so the same file can be selected again
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const handleButtonClick = () => {
-    // Check if Raggie is enabled before allowing file selection
-    if (!endpointContext.activeEndpoint?.ragieEnabled) {
+    
+    if (!endpointContext.activeEndpoint?.baseUrl || !endpointContext.activeEndpoint?.apiKey) {
       toast({
-        title: "File upload not available",
-        description: "Please enable Raggie AI in your endpoint settings to use file uploads.",
+        title: "Endpoint not configured",
+        description: "Please configure your endpoint settings first.",
         variant: "destructive"
       });
       return;
@@ -119,6 +120,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         style={{ display: 'none' }}
         accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.txt"
         multiple
+        disabled={disabled}
       />
       
       <Button 
@@ -127,9 +129,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
         size="icon" 
         onClick={handleButtonClick}
         title="Attach files"
-        disabled={!endpointContext.activeEndpoint?.ragieEnabled}
+        disabled={disabled || !endpointContext.activeEndpoint?.baseUrl || !endpointContext.activeEndpoint?.apiKey}
       >
-        <Paperclip size={18} className={!endpointContext.activeEndpoint?.ragieEnabled ? "opacity-50" : ""} />
+        <Paperclip 
+          size={18} 
+          className={
+            disabled || !endpointContext.activeEndpoint?.baseUrl || !endpointContext.activeEndpoint?.apiKey 
+              ? "opacity-50" 
+              : ""
+          } 
+        />
       </Button>
       
       {selectedFiles.length > 0 && (
@@ -146,6 +155,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 size="icon" 
                 className="h-4 w-4 p-0 ml-1"
                 onClick={() => onRemoveFile(index)}
+                disabled={disabled}
               >
                 <X size={12} />
               </Button>

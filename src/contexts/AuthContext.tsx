@@ -16,7 +16,7 @@ type AuthContextType = {
   checkAuth: () => Promise<void>;
 };
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://172.187.232.176:5000/api'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await response.json();
         setUser(data.user);
       } else {
-        // Token is invalid
+        
         localStorage.removeItem('token');
         setUser(null);
       }

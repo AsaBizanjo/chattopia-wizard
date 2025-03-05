@@ -1,4 +1,4 @@
-// contexts/ThemeContext.tsx
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
@@ -14,15 +14,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
-    // Check if user has a theme preference already
+    
     const savedTheme = localStorage.getItem('theme') as Theme | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    // Set initial theme based on saved preference or system preference
+    
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
     
-    // Apply the theme to document
+    
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -34,14 +34,14 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     setTheme((prevTheme) => {
       const newTheme = prevTheme === 'light' ? 'dark' : 'light';
       
-      // Update the document class
+      
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
       
-      // Save the preference
+      
       localStorage.setItem('theme', newTheme);
       
       return newTheme;

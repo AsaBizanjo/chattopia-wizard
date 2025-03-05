@@ -1,4 +1,3 @@
-// contexts/EndpointContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type Endpoint = {
@@ -8,9 +7,6 @@ type Endpoint = {
   apiKey: string;
   isActive: boolean;
   model: string;
-  ragieEnabled?: boolean;
-  ragieApiKey?: string;
-  ragieBaseUrl?: string;
 };
 
 type EndpointContextType = {
@@ -20,10 +16,7 @@ type EndpointContextType = {
     name: string, 
     baseUrl: string, 
     apiKey: string, 
-    model: string,
-    ragieEnabled?: boolean,
-    ragieApiKey?: string,
-    ragieBaseUrl?: string
+    model: string
   ) => void;
   removeEndpoint: (id: string) => void;
   setActiveEndpoint: (id: string | null) => void;
@@ -36,7 +29,7 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [activeEndpoint, setActiveEndpointState] = useState<Endpoint | null>(null);
 
-  // Load endpoints from localStorage on component mount
+  
   useEffect(() => {
     const savedEndpoints = localStorage.getItem('chat_endpoints');
     const currentEndpointId = localStorage.getItem('active_endpoint_id');
@@ -58,7 +51,7 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  // Save endpoints to localStorage whenever they change
+  
   useEffect(() => {
     if (endpoints.length > 0) {
       localStorage.setItem('chat_endpoints', JSON.stringify(endpoints));
@@ -73,10 +66,7 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     name: string, 
     baseUrl: string, 
     apiKey: string, 
-    model: string,
-    ragieEnabled: boolean = false,
-    ragieApiKey: string = '',
-    ragieBaseUrl: string = 'https://api.ragie.io'
+    model: string
   ) => {
     const newEndpoint: Endpoint = {
       id: `endpoint_${Math.random().toString(36).substr(2, 9)}`,
@@ -84,15 +74,12 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       baseUrl,
       apiKey,
       model,
-      isActive: false,
-      ragieEnabled,
-      ragieApiKey,
-      ragieBaseUrl
+      isActive: false
     };
     
     setEndpoints(prev => [...prev, newEndpoint]);
     
-    // If this is the first endpoint, set it as active
+    
     if (endpoints.length === 0) {
       setActiveEndpointState(newEndpoint);
     }
@@ -101,7 +88,7 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const removeEndpoint = (id: string) => {
     setEndpoints(prev => prev.filter(endpoint => endpoint.id !== id));
     
-    // If removing the active endpoint, set a new active endpoint
+    
     if (activeEndpoint && activeEndpoint.id === id) {
       const remaining = endpoints.filter(endpoint => endpoint.id !== id);
       setActiveEndpointState(remaining.length > 0 ? remaining[0] : null);
@@ -115,7 +102,7 @@ export const EndpointProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       )
     );
     
-    // Update active endpoint if it was the one that changed
+    
     if (activeEndpoint && activeEndpoint.id === id) {
       setActiveEndpointState(prev => prev ? { ...prev, ...data } : null);
     }

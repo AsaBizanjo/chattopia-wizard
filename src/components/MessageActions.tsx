@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { MoreHorizontal, Pencil, RotateCcw, Copy, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, RotateCcw, Copy, Trash2, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
@@ -21,12 +20,17 @@ const MessageActions: React.FC<MessageActionsProps> = ({
   onResend 
 }) => {
   const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
   
   const handleCopy = () => {
     navigator.clipboard.writeText(messageContent);
+    setCopied(true);
     toast({
       description: "Message copied to clipboard",
     });
+    
+    
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -35,26 +39,39 @@ const MessageActions: React.FC<MessageActionsProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-8 w-8 opacity-70 hover:opacity-100 transition-opacity"
         >
           <MoreHorizontal size={16} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onEdit(messageId)}>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem 
+          onClick={() => onEdit(messageId)}
+          className="flex items-center cursor-pointer"
+        >
           <Pencil className="mr-2" size={16} />
           Edit message
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onResend(messageId)}>
+        <DropdownMenuItem 
+          onClick={() => onResend(messageId)}
+          className="flex items-center cursor-pointer"
+        >
           <RotateCcw className="mr-2" size={16} />
           Resend
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleCopy}>
-          <Copy className="mr-2" size={16} />
-          Copy text
+        <DropdownMenuItem 
+          onClick={handleCopy}
+          className="flex items-center cursor-pointer"
+        >
+          {copied ? (
+            <CheckCheck className="mr-2" size={16} />
+          ) : (
+            <Copy className="mr-2" size={16} />
+          )}
+          {copied ? "Copied!" : "Copy text"}
         </DropdownMenuItem>
         <DropdownMenuItem 
-          className="text-destructive" 
+          className="text-destructive flex items-center cursor-pointer" 
           onClick={() => onDelete(messageId)}
         >
           <Trash2 className="mr-2" size={16} />

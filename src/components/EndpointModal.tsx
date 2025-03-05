@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox'; // Add this import
 import { useEndpoint } from '@/contexts/EndpointContext';
 import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
@@ -27,9 +26,6 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
   const [model, setModel] = useState('');
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [enableRagie, setEnableRagie] = useState(false); // Add this state
-  const [ragieApiKey, setRagieApiKey] = useState(''); // Add this state
-  const [ragieBaseUrl, setRagieBaseUrl] = useState('https://api.ragie.io'); // Add this state with default value
   const { addEndpoint, endpoints, updateEndpoint } = useEndpoint();
   const { toast } = useToast();
   const isEditing = Boolean(editEndpointId);
@@ -58,12 +54,7 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
         setBaseUrl(endpointToEdit.baseUrl);
         setApiKey(endpointToEdit.apiKey);
         setModel(endpointToEdit.model);
-        
-        // Load Ragie settings if they exist
-        setEnableRagie(!!endpointToEdit.ragieEnabled);
-        setRagieApiKey(endpointToEdit.ragieApiKey || '');
-        setRagieBaseUrl(endpointToEdit.ragieBaseUrl || 'https://api.ragie.io');
-        
+
         // Fetch models for this endpoint
         if (endpointToEdit.baseUrl) {
           fetchModels(endpointToEdit.baseUrl);
@@ -75,9 +66,6 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
       setBaseUrl('');
       setApiKey('');
       setModel('');
-      setEnableRagie(false);
-      setRagieApiKey('');
-      setRagieBaseUrl('https://api.ragie.io');
       setAvailableModels(defaultModels);
     }
   }, [isOpen, editEndpointId, endpoints]);
@@ -90,19 +78,23 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
   }, [baseUrl]);
 
   const fetchModels = async (url: string) => {
-    // Existing fetchModels implementation...
     setIsLoadingModels(true);
     try {
       const modelsUrl = `${url.endsWith('/') ? url.slice(0, -1) : url}/models`;
+      
+      // Always include the Authorization header with the current apiKey value
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+      
       const response = await axios.get(modelsUrl, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         withCredentials: false // Explicitly set to false to avoid CORS issues
       });
-      
+  
       let modelIds: string[] = [];
-      
+  
       // Handle different API response formats
       if (response.data && Array.isArray(response.data.data)) {
         // Standard OpenAI-like format
@@ -115,15 +107,15 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
         const possibleModelArrays = Object.values(response.data).filter(
           value => Array.isArray(value) && value.length > 0 && value[0]?.id
         );
-        
+  
         if (possibleModelArrays.length > 0) {
           modelIds = possibleModelArrays[0].map((model: Model) => model.id);
         }
       }
-      
+  
       if (modelIds.length > 0) {
         setAvailableModels(modelIds);
-        
+  
         // If no model is selected yet and we have models, select the first one
         if (!model && modelIds.length > 0) {
           setModel(modelIds[0]);
@@ -151,32 +143,19 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (name.trim() && baseUrl.trim() && apiKey.trim() && model) {
-      // Validate Ragie API key if enabled
-      if (enableRagie && !ragieApiKey.trim()) {
-        toast({
-          title: "Invalid input",
-          description: "Ragie API Key is required when Ragie integration is enabled.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
       const endpointData = {
         name: name.trim(),
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
         model,
-        ragieEnabled: enableRagie,
-        ragieApiKey: ragieApiKey.trim(),
-        ragieBaseUrl: ragieBaseUrl.trim()
       };
-      
+
       if (isEditing && editEndpointId) {
         // Update existing endpoint
         updateEndpoint(editEndpointId, endpointData);
-        
+
         toast({
           title: "Endpoint updated",
           description: `${name} has been updated successfully.`,
@@ -184,29 +163,23 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
       } else {
         // Add new endpoint
         addEndpoint(
-          name.trim(), 
-          baseUrl.trim(), 
-          apiKey.trim(), 
-          model, 
-          enableRagie, 
-          ragieApiKey.trim(), 
-          ragieBaseUrl.trim()
+          name.trim(),
+          baseUrl.trim(),
+          apiKey.trim(),
+          model
         );
-        
+
         toast({
           title: "Endpoint added",
           description: `${name} has been added to your endpoints.`,
         });
       }
-      
+
       // Reset form
       setName('');
       setBaseUrl('');
       setApiKey('');
       setModel('');
-      setEnableRagie(false);
-      setRagieApiKey('');
-      setRagieBaseUrl('https://api.ragie.io');
       onClose();
     } else {
       toast({
@@ -285,46 +258,7 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
               </p>
             )}
           </div>
-          
-          {/* Ragie API Integration Section */}
-          <div className="pt-2 border-t">
-            <div className="flex items-center space-x-2 mb-4">
-              <Checkbox 
-                id="enableRagie" 
-                checked={enableRagie}
-                onCheckedChange={(checked) => setEnableRagie(checked as boolean)}
-              />
-              <Label htmlFor="enableRagie" className="cursor-pointer">
-                Enable Ragie API for file upload and processing
-              </Label>
-            </div>
-            
-            {enableRagie && (
-              <>
-                <div className="space-y-2 mt-4">
-                  <Label htmlFor="ragieBaseUrl">Ragie API Base URL</Label>
-                  <Input
-                    id="ragieBaseUrl"
-                    value={ragieBaseUrl}
-                    onChange={(e) => setRagieBaseUrl(e.target.value)}
-                    placeholder="e.g., https://api.ragie.io"
-                  />
-                </div>
-                
-                <div className="space-y-2 mt-4">
-                  <Label htmlFor="ragieApiKey">Ragie API Key</Label>
-                  <Input
-                    id="ragieApiKey"
-                    type="password"
-                    value={ragieApiKey}
-                    onChange={(e) => setRagieApiKey(e.target.value)}
-                    placeholder="Your Ragie API key"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-          
+
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel

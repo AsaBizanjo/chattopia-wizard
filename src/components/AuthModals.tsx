@@ -67,7 +67,7 @@ const AuthModals: React.FC<AuthModalProps> = ({
 
   const toggleView = () => {
     setView(view === 'login' ? 'signup' : 'login');
-    // Clear fields when switching views
+    
     setEmail('');
     setPassword('');
     setUsername('');

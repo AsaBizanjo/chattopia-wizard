@@ -6,6 +6,9 @@ import { Send } from 'lucide-react';
 import { useChat } from '@/contexts/ChatContext';
 import FileUpload from './FileUpload';
 import PromptLibrary from './PromptLibrary';
+import { useTheme } from '@/contexts/ThemeContext';
+import { LogIn, Menu, X, Sun, Moon } from 'lucide-react';
+
 
 interface ChatInputProps {
   editingMessageId?: string;
@@ -22,13 +25,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { sendMessage, isLoading, updateMessage } = useChat();
+    const { theme, toggleTheme } = useTheme();
   
-  // Set initial content when editing
   useEffect(() => {
     setMessage(initialContent);
   }, [initialContent]);
 
-  // Focus textarea when component mounts or when editing starts
+  
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -40,17 +43,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
     
     if (message.trim() && !isLoading) {
       if (editingMessageId) {
-        // Handle edit mode
+        
         updateMessage(editingMessageId, message.trim());
         onCancelEdit?.();
       } else {
-        // Handle send mode
+        
         await sendMessage(message.trim(), selectedFiles);
         setSelectedFiles([]);
       }
       setMessage('');
       
-      // Focus the textarea after sending
+      
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
@@ -80,7 +83,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       return newMessage;
     });
     
-    // Focus and resize textarea after adding prompt
+    
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -90,7 +93,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }, 10);
   };
 
-  // Auto-resize textarea as content grows
+  
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -150,6 +153,22 @@ const ChatInput: React.FC<ChatInputProps> = ({
           <span>Press Enter to send, Shift+Enter for a new line</span>
         </div>
       )}
+            <div className="py-2 shrink-0 flex justify-center items-center bg-background h-8">
+            <div className="flex items-center justify-center">
+              <span className="text-xs text-muted-foreground">
+                Made by <a href="https://github.com/AsaBizanjo" className="text-primary hover:underline">Asa Bizanjo</a>
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="ml-2 h-6 w-6 p-0" 
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+              </Button>
+            </div>
+          </div>
     </form>
   );
 };
