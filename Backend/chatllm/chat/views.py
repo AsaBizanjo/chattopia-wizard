@@ -467,43 +467,42 @@ def rename_conversation(request, conversation_id):
         )
     
 
+from openai import OpenAI
+
 @csrf_exempt
 @require_POST
 def fetch_models(request):
     try:
         # Parse request body
         data = json.loads(request.body)
-        base_url = data.get('baseUrl')
+        api_url = data.get('apiUrl')
         api_key = data.get('apiKey')
         
         # Validate inputs
-        if not base_url or not api_key:
+        if not api_url or not api_key:
             return JsonResponse({
                 'success': False,
-                'error': 'Base URL and API key are required'
+                'error': 'API URL and API key are required'
             }, status=400)
         
-        # Create OpenAI client
-        client = openai(
-            base_url=base_url,
-            api_key=api_key
+        # Create OpenAI client with the provided API URL and key
+        client = OpenAI(
+            api_key=api_key,
+            base_url=api_url,
+            max_retries=0,
+            timeout=100
         )
         
-        # Fetch models
-        response = client.models.list()
+        # Fetch models using the client
+        model_list = client.models.list()
         
         # Extract model IDs
-        if response and hasattr(response, 'data'):
-            model_ids = [model.id for model in response.data]
-            return JsonResponse({
-                'success': True,
-                'models': model_ids
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': 'Unexpected response format from API'
-            }, status=500)
+        model_ids = [model.id for model in model_list.data]
+        
+        return JsonResponse({
+            'success': True,
+            'models': model_ids
+        })
             
     except Exception as e:
         return JsonResponse({

@@ -85,7 +85,7 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
     setIsLoadingModels(true);
     try {
       
-      const response = await fetch('http://172.187.232.176:5000/api/fetch-models/', {
+      const response = await fetch('http://172.187.232.176:5000/api/chats/api/fetch-models/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,6 +97,8 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
       });
       
       const data = await response.json();
+
+      
       
       if (response.ok && data.success) {
         const modelIds = data.models;
