@@ -77,6 +77,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
      "http://localhost:3000",  # Add your React app's port
     "http://localhost:5173",  # Add Vite's default port if using Vite
+    "http://172.187.232.176:8080",
+    "http://chat.asabizanjo.com",
+    "https://chat.asabizanjo.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
