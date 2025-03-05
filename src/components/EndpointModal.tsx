@@ -63,80 +63,81 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
     }
   }, [isOpen, editEndpointId, endpoints]);
 
-  const fetchModels = async () => {
-    if (!baseUrl.trim()) {
-      toast({
-        title: "Missing URL",
-        description: "Please enter a base URL before fetching models.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!apiKey.trim()) {
-      toast({
-        title: "Missing API Key",
-        description: "Please enter an API key before fetching models.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoadingModels(true);
-    try {
-      // Create an OpenAI client with the provided baseURL and apiKey
-      const client = new OpenAI({
-        baseURL: baseUrl.trim(),
-        apiKey: apiKey.trim(),
-        dangerouslyAllowBrowser: true, // Required for browser usage
-      });
+ const fetchModels = async () => {
+  if (!baseUrl.trim()) {
+    toast({
+      title: "Missing URL",
+      description: "Please enter a base URL before fetching models.",
+      variant: "destructive"
+    });
+    return;
+  }
+  
+  if (!apiKey.trim()) {
+    toast({
+      title: "Missing API Key",
+      description: "Please enter an API key before fetching models.",
+      variant: "destructive"
+    });
+    return;
+  }
+  
+  setIsLoadingModels(true);
+  try {
+    // Create an OpenAI client with the provided baseURL and apiKey
+    const client = new OpenAI({
+      baseURL: baseUrl.trim(),
+      apiKey: apiKey.trim(),
+      dangerouslyAllowBrowser: true, 
+    });
 
-      // Fetch models using the OpenAI client
-      const response = await client.models.list();
+    // Fetch models using the OpenAI client
+    const response = await client.models.list();
+    
+    if (response && response.data) {
+      // Extract model IDs from the response
+      const modelIds = response.data.map(model => model.id);
       
-      if (response && response.data && Array.isArray(response.data)) {
-        const modelIds = response.data.map(model => model.id);
+      if (modelIds.length > 0) {
+        setAvailableModels(modelIds);
         
-        if (modelIds.length > 0) {
-          setAvailableModels(modelIds);
-          
-          // If no model is selected yet and we have models, select the first one
-          if (!model && modelIds.length > 0) {
-            setModel(modelIds[0]);
-          }
-          
-          toast({
-            title: "Models fetched",
-            description: `Successfully fetched ${modelIds.length} models.`,
-          });
-        } else {
-          // Fallback to default models if no models were found
-          setAvailableModels(defaultModels);
-          toast({
-            title: "Warning",
-            description: "No models found in the API response. Using default models list.",
-          });
+        // If no model is selected yet and we have models, select the first one
+        if (!model && modelIds.length > 0) {
+          setModel(modelIds[0]);
         }
+        
+        toast({
+          title: "Models fetched",
+          description: `Successfully fetched ${modelIds.length} models.`,
+        });
       } else {
+        // Fallback to default models if no models were found
         setAvailableModels(defaultModels);
         toast({
-          title: "Unexpected response",
-          description: "The API returned an unexpected format. Using default models list.",
-          variant: "destructive"
+          title: "Warning",
+          description: "No models found in the API response. Using default models list.",
         });
       }
-    } catch (error) {
-      console.error("Error fetching models:", error);
+    } else {
       setAvailableModels(defaultModels);
       toast({
-        title: "Error fetching models",
-        description: "Could not fetch models from the endpoint. Using default models list.",
+        title: "Unexpected response",
+        description: "The API returned an unexpected format. Using default models list.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoadingModels(false);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching models:", error);
+    setAvailableModels(defaultModels);
+    toast({
+      title: "Error fetching models",
+      description: "Could not fetch models from the endpoint. Using default models list.",
+      variant: "destructive"
+    });
+  } finally {
+    setIsLoadingModels(false);
+  }
+};
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
