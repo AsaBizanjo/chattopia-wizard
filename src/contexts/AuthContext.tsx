@@ -16,7 +16,7 @@ type AuthContextType = {
   checkAuth: () => Promise<void>;
 };
 
-const API_URL = 'http://172.187.232.176:5000/api'
+const API_URL = 'https://172.187.232.176:5000/api'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
