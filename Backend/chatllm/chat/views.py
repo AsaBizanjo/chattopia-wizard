@@ -1,4 +1,5 @@
 # chat/views.py
+from django.http import JsonResponse
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -16,6 +17,8 @@ from typing import List, Dict, Any
 from django.shortcuts import get_object_or_404
 from pgvector.django import L2Distance
 from django.db.models import F
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
@@ -462,3 +465,48 @@ def rename_conversation(request, conversation_id):
             {"error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+    
+
+@csrf_exempt
+@require_POST
+def fetch_models(request):
+    try:
+        # Parse request body
+        data = json.loads(request.body)
+        base_url = data.get('baseUrl')
+        api_key = data.get('apiKey')
+        
+        # Validate inputs
+        if not base_url or not api_key:
+            return JsonResponse({
+                'success': False,
+                'error': 'Base URL and API key are required'
+            }, status=400)
+        
+        # Create OpenAI client
+        client = openai(
+            base_url=base_url,
+            api_key=api_key
+        )
+        
+        # Fetch models
+        response = client.models.list()
+        
+        # Extract model IDs
+        if response and hasattr(response, 'data'):
+            model_ids = [model.id for model in response.data]
+            return JsonResponse({
+                'success': True,
+                'models': model_ids
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Unexpected response format from API'
+            }, status=500)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

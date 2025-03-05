@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
 from .views import (
     ConversationViewSet, MessageViewSet, MessageVersionViewSet, 
-    MessageFileViewSet, chat_completion, search_context, fork_conversation, rename_conversation
+    MessageFileViewSet, chat_completion, search_context, fork_conversation, rename_conversation,fetch_models
 )
 
 # Main router
@@ -24,5 +24,6 @@ urlpatterns = [
     path('search-context/', search_context, name='search-context'),
     path('conversations/<int:conversation_id>/fork/', fork_conversation, name='fork-conversation'),
     path('conversations/<int:conversation_id>/rename/',rename_conversation, name='rename-conversation'),
+    path('api/fetch-models/', fetch_models, name='fetch_models'),
 
 ]
