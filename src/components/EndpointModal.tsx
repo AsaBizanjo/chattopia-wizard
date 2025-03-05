@@ -254,17 +254,17 @@ const EndpointModal: React.FC<EndpointModalProps> = ({ isOpen, onClose, editEndp
               <SelectTrigger>
                 <SelectValue placeholder={isLoadingModels ? "Loading models..." : "Select a model"} />
               </SelectTrigger>
-              <SelectContent>
-                {isLoadingModels ? (
-                  <SelectItem value="loading" disabled>Loading models...</SelectItem>
-                ) : (
-                  availableModels.map((modelOption) => (
-                    <SelectItem key={modelOption} value={modelOption}>
-                      {modelOption}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
+              <SelectContent className="max-h-[200px] overflow-y-auto">
+              {isLoadingModels ? (
+                <SelectItem value="loading" disabled>Loading models...</SelectItem>
+              ) : (
+                availableModels.map((modelOption) => (
+                  <SelectItem key={modelOption} value={modelOption}>
+                    {modelOption}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground mt-1">
               {availableModels === defaultModels ? 
